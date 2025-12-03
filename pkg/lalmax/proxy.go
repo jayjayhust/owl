@@ -6,8 +6,8 @@ import (
 )
 
 const (
-	apiCtrlStartRelayPull = "/api/ctrl/startRelayPull"
-	apiCtrlStopRelayPull  = "/api/ctrl/stopRelayPull"
+	apiCtrlStartRelayPull = "/api/ctrl/start_relay_pull"
+	apiCtrlStopRelayPull  = "/api/ctrl/stop_relay_pull"
 )
 
 type ApiCtrlStartRelayPullReq struct {

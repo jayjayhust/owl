@@ -271,10 +271,18 @@ func (n *NodeManager) AddStreamProxy(server *MediaServer, in AddStreamProxyReque
 	return driver.AddStreamProxy(context.Background(), server, &in)
 }
 
-func (n *NodeManager) GetSnapshot(server *MediaServer, in zlm.GetSnapRequest) ([]byte, error) {
+func (n *NodeManager) GetSnapshot(server *MediaServer, in GetSnapRequest) ([]byte, error) {
 	driver, err := n.getDriver(server.Type)
 	if err != nil {
 		return nil, err
 	}
 	return driver.GetSnapshot(context.Background(), server, &in)
+}
+
+func (n *NodeManager) GetStreamLiveAddr(server *MediaServer, httpPrefix, host, app, stream string) StreamLiveAddr {
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return StreamLiveAddr{Label: err.Error()}
+	}
+	return driver.GetStreamLiveAddr(context.Background(), server, httpPrefix, host, app, stream)
 }

@@ -72,9 +72,6 @@ func (c Core) AddStreamPush(ctx context.Context, in *AddStreamPushInput) (*Strea
 		slog.ErrorContext(ctx, "Copy", "err", err)
 	}
 
-	if in.App == "rtp" {
-		return nil, reason.ErrBadRequest.With("请更换 app 参数")
-	}
 	out.ID = c.uniqueID.UniqueID(bz.IDPrefixRTMP)
 	if err := c.store.StreamPush().Add(ctx, &out); err != nil {
 		if orm.IsDuplicatedKey(err) {

@@ -29,5 +29,7 @@ type Driver interface {
 	OpenRTPServer(ctx context.Context, ms *MediaServer, req *zlm.OpenRTPServerRequest) (*zlm.OpenRTPServerResponse, error)
 	CloseRTPServer(ctx context.Context, ms *MediaServer, req *zlm.CloseRTPServerRequest) (*zlm.CloseRTPServerResponse, error)
 	AddStreamProxy(ctx context.Context, ms *MediaServer, req *AddStreamProxyRequest) (*zlm.AddStreamProxyResponse, error)
-	GetSnapshot(ctx context.Context, ms *MediaServer, req *zlm.GetSnapRequest) ([]byte, error)
+	GetSnapshot(ctx context.Context, ms *MediaServer, req *GetSnapRequest) ([]byte, error)
+
+	GetStreamLiveAddr(ctx context.Context, ms *MediaServer, httpPrefix, host, app, stream string) StreamLiveAddr
 }

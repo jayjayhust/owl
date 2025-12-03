@@ -4,12 +4,29 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/gowvp/gb28181/pkg/zlm"
 )
 
+var _ Driver = (*ZLMDriver)(nil)
+
 type ZLMDriver struct {
 	engine zlm.Engine
+}
+
+// GetStreamLiveAddr implements Driver.
+func (d *ZLMDriver) GetStreamLiveAddr(ctx context.Context, ms *MediaServer, httpPrefix, host, app, stream string) StreamLiveAddr {
+	var out StreamLiveAddr
+	wsPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "wss", 1), "http", "ws", 1)
+	out.WSFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", wsPrefix, stream)
+	out.HTTPFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", httpPrefix, stream)
+	out.HLS = fmt.Sprintf("%s/proxy/sms/%s/hls.fmp4.m3u8", httpPrefix, stream)
+	rtcPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "webrtc", 1), "http", "webrtc", 1)
+	out.WebRTC = fmt.Sprintf("%s/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", rtcPrefix, app, stream)
+	out.RTMP = fmt.Sprintf("rtmp://%s:%d/%s", host, ms.Ports.RTMP, stream)
+	out.RTSP = fmt.Sprintf("rtsp://%s:%d/%s", host, ms.Ports.RTSP, stream)
+	return out
 }
 
 func NewZLMDriver() *ZLMDriver {
@@ -138,7 +155,7 @@ func (d *ZLMDriver) AddStreamProxy(ctx context.Context, ms *MediaServer, req *Ad
 	})
 }
 
-func (d *ZLMDriver) GetSnapshot(ctx context.Context, ms *MediaServer, req *zlm.GetSnapRequest) ([]byte, error) {
+func (d *ZLMDriver) GetSnapshot(ctx context.Context, ms *MediaServer, req *GetSnapRequest) ([]byte, error) {
 	engine := d.withConfig(ms)
-	return engine.GetSnap(*req)
+	return engine.GetSnap(req.GetSnapRequest)
 }

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -211,7 +212,7 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 			return nil, err
 		}
 
-		app = "rtp"
+		app = "live"
 		appStream = ch.ID
 
 		mediaServerID = sms.DefaultMediaServerID
@@ -237,10 +238,12 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 			return nil, err
 		}
 		app = proxy.App
+		// TODO: 2025-12-03, 防止旧版本无法播放，强制为 live 先
+		app = "live" //  proxy.App
 		appStream = proxy.Stream
 		mediaServerID = sms.DefaultMediaServerID
 	} else if bz.IsOnvif(channelID) {
-		app = "rtp"
+		app = "live"
 		appStream = channelID
 		mediaServerID = sms.DefaultMediaServerID
 	} else {
@@ -262,46 +265,19 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 
 	// 播放规则
 	// https://github.com/zlmediakit/ZLMediaKit/wiki/%E6%92%AD%E6%94%BEurl%E8%A7%84%E5%88%99
+	prefix := c.Request.Header.Get("X-Forwarded-Prefix")
+	if prefix == "" {
+		prefix = "http://" + host + ":" + strconv.Itoa(httpPort)
+	}
+	if h := c.Request.Header.Get("X-Forwarded-Host"); h != "" {
+		host = h
+	}
 
+	item := a.uc.SMSAPI.smsCore.GetStreamLiveAddr(svr, prefix, host, app, stream)
 	out := playOutput{
 		App:    app,
 		Stream: appStream,
-		Items: []streamAddrItem{
-			{
-				Label:   "默认线路",
-				WSFLV:   fmt.Sprintf("ws://%s:%d/proxy/sms/%s.live.flv", host, httpPort, stream) + "?" + session,
-				HTTPFLV: fmt.Sprintf("http://%s:%d/proxy/sms/%s.live.flv", host, httpPort, stream) + "?" + session,
-				RTMP:    fmt.Sprintf("rtmp://%s:%d/%s", host, svr.Ports.RTMP, stream) + "?" + session,
-				RTSP:    fmt.Sprintf("rtsp://%s:%d/%s", host, svr.Ports.RTSP, stream) + "?" + session,
-				WebRTC:  fmt.Sprintf("webrtc://%s:%d/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", host, httpPort, app, stream) + "&" + session,
-				HLS:     fmt.Sprintf("http://%s:%d/proxy/sms/%s/hls.fmp4.m3u8", host, httpPort, stream) + "?" + session,
-			},
-			// {
-			// 	Label:   "SSL 线路",
-			// 	WSFLV:   fmt.Sprintf("wss://%s:%d/%s.live.flv", host, svr.Ports.HTTP, stream) + session,
-			// 	HTTPFLV: fmt.Sprintf("https://%s:%d/%s.live.flv", host, svr.Ports.HTTP, stream) + session,
-			// 	RTMP:    fmt.Sprintf("rtmps://%s:%d/%s", host, svr.Ports.RTMPs, stream) + session,
-			// 	RTSP:    fmt.Sprintf("rtsps://%s:%d/%s", host, svr.Ports.RTSPs, stream) + session,
-			// 	WebRTC:  fmt.Sprintf("webrtc://%s:%d/index/api/webrtc?app=%s&stream=%s&type=play", host, svr.Ports.HTTPS, app, stream) + "&" + session,
-			// 	HLS:     fmt.Sprintf("https://%s:%d/%s/hls.fmp4.m3u8", host, svr.Ports.HTTPS, stream) + "?" + session,
-			// },
-		},
-	}
-
-	prefix := c.Request.Header.Get("X-Forwarded-Prefix")
-	if prefix != "" {
-		wsPrefix := strings.Replace(strings.Replace(prefix, "https", "wss", 1), "http", "ws", 1)
-		out.Items[0].WSFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", wsPrefix, stream) + "?" + session
-		out.Items[0].HTTPFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", prefix, stream) + "?" + session
-		out.Items[0].HLS = fmt.Sprintf("%s/proxy/sms/%s/hls.fmp4.m3u8", prefix, stream) + "?" + session
-		rtcPrefix := strings.Replace(strings.Replace(prefix, "https", "webrtc", 1), "http", "webrtc", 1)
-		out.Items[0].WebRTC = fmt.Sprintf("%s/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", rtcPrefix, app, stream) + "&" + session
-
-		host := c.Request.Header.Get("X-Forwarded-Host")
-		if host != "" {
-			out.Items[0].RTMP = fmt.Sprintf("rtmp://%s:%d/%s", host, svr.Ports.RTMP, stream) + "?" + session
-			out.Items[0].RTSP = fmt.Sprintf("rtsp://%s:%d/%s", host, svr.Ports.RTSP, stream) + "?" + session
-		}
+		Items:  []sms.StreamLiveAddr{item},
 	}
 
 	// 取一张快照
@@ -309,10 +285,13 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 		for range 2 {
 			time.Sleep(3 * time.Second)
 			rtsp := fmt.Sprintf("rtsp://%s:%d/%s", "127.0.0.1", svr.Ports.RTSP, stream) + "?" + session
-			body, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, zlm.GetSnapRequest{
-				URL:        rtsp,
-				TimeoutSec: 10,
-				ExpireSec:  15,
+			body, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, sms.GetSnapRequest{
+				GetSnapRequest: zlm.GetSnapRequest{
+					URL:        rtsp,
+					TimeoutSec: 10,
+					ExpireSec:  15,
+				},
+				Stream: channelID,
 			})
 			if err != nil {
 				slog.ErrorContext(c.Request.Context(), "get snapshot", "err", err)
@@ -360,10 +339,13 @@ func (a IPCAPI) refreshSnapshot(c *gin.Context, in *refreshSnapshotInput) (any, 
 			return nil, err
 		}
 
-		img, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, zlm.GetSnapRequest{
-			URL:        in.URL,
-			TimeoutSec: 10,
-			ExpireSec:  28800,
+		img, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, sms.GetSnapRequest{
+			GetSnapRequest: zlm.GetSnapRequest{
+				URL:        in.URL,
+				TimeoutSec: 10,
+				ExpireSec:  28800,
+			},
+			Stream: channelID,
 		})
 		if err != nil {
 			slog.ErrorContext(c.Request.Context(), "get snapshot", "err", err)

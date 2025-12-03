@@ -3,6 +3,9 @@ package sms
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"net"
+	"strings"
 
 	"github.com/gowvp/gb28181/pkg/lalmax"
 	"github.com/gowvp/gb28181/pkg/zlm"
@@ -17,6 +20,20 @@ var _ Driver = (*LalmaxDriver)(nil)
 
 type LalmaxDriver struct {
 	engine lalmax.Engine
+}
+
+// GetStreamLiveAddr implements Driver.
+func (l *LalmaxDriver) GetStreamLiveAddr(ctx context.Context, ms *MediaServer, httpPrefix string, host string, app string, stream string) StreamLiveAddr {
+	var out StreamLiveAddr
+	wsPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "wss", 1), "http", "ws", 1)
+	out.WSFLV = fmt.Sprintf("%s/proxy/sms/%s.flv", wsPrefix, stream)
+	out.HTTPFLV = fmt.Sprintf("%s/proxy/sms/%s.flv", httpPrefix, stream)
+	out.HLS = fmt.Sprintf("%s/proxy/sms/%s/hls.fmp4.m3u8", httpPrefix, stream)
+	rtcPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "webrtc", 1), "http", "webrtc", 1)
+	out.WebRTC = fmt.Sprintf("%s/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", rtcPrefix, app, stream)
+	out.RTMP = fmt.Sprintf("rtmp://%s:%d/%s", host, ms.Ports.RTMP, stream)
+	out.RTSP = fmt.Sprintf("rtsp://%s:%d/%s", host, ms.Ports.RTSP, stream)
+	return out
 }
 
 // AddStreamProxy implements Driver.
@@ -45,20 +62,40 @@ func (l *LalmaxDriver) CloseRTPServer(ctx context.Context, ms *MediaServer, req 
 // Connect implements Driver.
 func (l *LalmaxDriver) Connect(ctx context.Context, ms *MediaServer) error {
 	engine := l.withConfig(ms)
-	resp, err := engine.GetServerConfig()
+	resp, err := engine.GetServerConfig(ctx)
 	if err != nil {
 		return err
 	}
-	// if len(resp.Data) == 0 {
-	// return fmt.Errorf("Lalmax 服务节点配置为空")
-	// }
-	_ = resp
-	panic("unimplemented")
+
+	http := ms.Ports.HTTP
+	ms.Ports.FLV = http
+	ms.Ports.WsFLV = http
+	rtmp, err := net.ResolveTCPAddr("tcp", resp.RtmpConfig.Addr)
+	if err != nil {
+		return err
+	}
+	ms.Ports.RTMP = rtmp.Port
+	rtmps, err := net.ResolveTCPAddr("tcp", resp.RtmpConfig.RtmpsAddr)
+	if err != nil {
+		return err
+	}
+	ms.Ports.RTMPs = rtmps.Port
+
+	rtsp, err := net.ResolveTCPAddr("tcp", resp.RtspConfig.Addr)
+	if err != nil {
+		return err
+	}
+	ms.Ports.RTSP = rtsp.Port
+
+	ms.HookAliveInterval = 10
+	ms.Status = true
+	return nil
 }
 
 // GetSnapshot implements Driver.
-func (l *LalmaxDriver) GetSnapshot(ctx context.Context, ms *MediaServer, req *zlm.GetSnapRequest) ([]byte, error) {
-	panic("unimplemented")
+func (l *LalmaxDriver) GetSnapshot(ctx context.Context, ms *MediaServer, req *GetSnapRequest) ([]byte, error) {
+	engine := l.withConfig(ms)
+	return engine.GetKeyFrameImage(ctx, req.Stream)
 }
 
 // OpenRTPServer implements Driver.
@@ -93,11 +130,25 @@ func (l *LalmaxDriver) Protocol() string {
 
 // Setup implements Driver.
 func (l *LalmaxDriver) Setup(ctx context.Context, ms *MediaServer, webhookURL string) error {
-	panic("unimplemented")
+	engine := l.withConfig(ms)
+	if err := engine.SetHttpNotifyConfig(ctx, lalmax.HttpNotifyConfig{
+		Enable: true,
+		// OnPubStart:              webhookURL,
+		// OnPubStop:               webhookURL,
+		OnSubStartWithoutStream: fmt.Sprintf("%s/on_stream_not_found", webhookURL),
+		OnStreamChanged:         fmt.Sprintf("%s/on_stream_changed", webhookURL),
+		ClientSize:              50,
+	}); err != nil {
+		return err
+	}
+	slog.InfoContext(ctx, "Lalmax 服务节点配置设置成功")
+	return nil
 }
 
 func NewLalmaxDriver() *LalmaxDriver {
-	return &LalmaxDriver{}
+	return &LalmaxDriver{
+		engine: lalmax.NewEngine(),
+	}
 }
 
 func (l *LalmaxDriver) withConfig(ms *MediaServer) lalmax.Engine {

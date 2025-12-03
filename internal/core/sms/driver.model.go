@@ -1,5 +1,7 @@
 package sms
 
+import "github.com/gowvp/gb28181/pkg/zlm"
+
 type AddStreamProxyRequest struct {
 	App     string `json:"app"`      // 添加的流的应用名，例如 live
 	Stream  string `json:"stream"`   // 添加的流的 id 名，例如 test
@@ -29,4 +31,20 @@ type AddStreamProxyRequest struct {
 	// HLSSavePath   *string `json:"hls_save_path,omitempty"`   // hls 文件保存保存根目录，置空使用默认
 	// ModifyStamp   *int    `json:"modify_stamp,omitempty"`    // 该流是否开启时间戳覆盖(0:绝对时间戳/1:系统时间戳/2:相对时间戳)
 	// AutoClose     *bool   `json:"auto_close,omitempty"`      // 无人观看是否自动关闭流(不触发无人观看 hook)
+}
+
+type GetSnapRequest struct {
+	zlm.GetSnapRequest
+	// lalmax
+	Stream string `json:"stream"`
+}
+
+type StreamLiveAddr struct {
+	Label   string `json:"label"`
+	WSFLV   string `json:"ws_flv"`
+	HTTPFLV string `json:"http_flv"`
+	RTMP    string `json:"rtmp"`
+	RTSP    string `json:"rtsp"`
+	WebRTC  string `json:"webrtc"`
+	HLS     string `json:"hls"`
 }

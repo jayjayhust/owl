@@ -64,7 +64,7 @@ func (c *Core) AddStreamProxy(ctx context.Context, in *AddStreamProxyInput) (*St
 	}
 	out.ID = c.uniqueID.UniqueID(bz.IDPrefixRTSP)
 	out.Stream = out.ID
-	out.App = "rtp"
+	out.App = "live"
 	if err := c.store.StreamProxy().Add(ctx, &out); err != nil {
 		if orm.IsDuplicatedKey(err) {
 			return nil, reason.ErrDB.SetMsg("stream 重复，请勿重复添加")

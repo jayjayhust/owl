@@ -70,3 +70,8 @@ var codeMsgMap = map[ResCode]string{
 	CodeOnvifPtzDirectionFail:       "onvif ptz 方向控制失败",
 	CodeOnvifPtzStopFail:            "onvif ptz 停止控制失败",
 }
+
+type FixedHeader struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg"` // 仅 code 发生错误时，此参数才有效
+}

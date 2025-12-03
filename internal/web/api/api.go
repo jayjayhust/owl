@@ -17,6 +17,7 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-gonic/gin"
+	"github.com/gowvp/gb28181/internal/core/sms"
 	"github.com/gowvp/gb28181/plugin/stat"
 	"github.com/gowvp/gb28181/plugin/stat/statapi"
 	"github.com/ixugo/goddd/domain/version/versionapi"
@@ -107,18 +108,9 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 }
 
 type playOutput struct {
-	App    string           `json:"app"`
-	Stream string           `json:"stream"`
-	Items  []streamAddrItem `json:"items"`
-}
-type streamAddrItem struct {
-	Label   string `json:"label"`
-	WSFLV   string `json:"ws_flv"`
-	HTTPFLV string `json:"http_flv"`
-	RTMP    string `json:"rtmp"`
-	RTSP    string `json:"rtsp"`
-	WebRTC  string `json:"webrtc"`
-	HLS     string `json:"hls"`
+	App    string               `json:"app"`
+	Stream string               `json:"stream"`
+	Items  []sms.StreamLiveAddr `json:"items"`
 }
 
 type getHealthOutput struct {
