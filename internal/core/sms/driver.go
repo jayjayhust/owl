@@ -1,0 +1,33 @@
+package sms
+
+import (
+	"context"
+
+	"github.com/gowvp/gb28181/pkg/zlm"
+)
+
+const (
+	ProtocolZLMediaKit = "zlm"
+	ProtocolLalmax     = "lalmax"
+)
+
+// Driver 定义流媒体服务的通用行为
+type Driver interface {
+	// Protocol 返回协议/类型名称，如 "zlm", "srs"
+	Protocol() string
+
+	// Connect 测试连接并获取初始信息 (对应目前的 connection 方法中的部分逻辑)
+	Connect(ctx context.Context, ms *MediaServer) error
+
+	// Setup 下发配置到流媒体服务 (对应目前的 connection 方法中的配置逻辑)
+	Setup(ctx context.Context, ms *MediaServer, webhookURL string) error
+
+	// Ping 主动探测服务是否在线
+	Ping(ctx context.Context, ms *MediaServer) error
+
+	// Stream Operations
+	OpenRTPServer(ctx context.Context, ms *MediaServer, req *zlm.OpenRTPServerRequest) (*zlm.OpenRTPServerResponse, error)
+	CloseRTPServer(ctx context.Context, ms *MediaServer, req *zlm.CloseRTPServerRequest) (*zlm.CloseRTPServerResponse, error)
+	AddStreamProxy(ctx context.Context, ms *MediaServer, req *AddStreamProxyRequest) (*zlm.AddStreamProxyResponse, error)
+	GetSnapshot(ctx context.Context, ms *MediaServer, req *zlm.GetSnapRequest) ([]byte, error)
+}

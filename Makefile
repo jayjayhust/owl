@@ -141,7 +141,7 @@ build/local:
 	$(eval dir := $(BUILD_DIR_ROOT)/$(GOOS)_$(GOARCH))
 	@echo 'Building $(VERSION) $(dir)...'
 	@rm -rf $(dir)
-	@GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
+	@CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build \
 		-trimpath \
 		-ldflags="-s -w \
 			-X main.buildVersion=$(VERSION) \
@@ -175,7 +175,7 @@ build/windows:
 	@make build/local GOOS=$(GOOS) GOARCH=$(GOARCH)
 
 docker/build:
-	@docker build --force-rm=true --push --platform linux/amd64 -t registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest -f Dockerfile .
+	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest -f Dockerfile .
 
 docker/save:
 	@docker save -o $(MODULE_NAME).tar $(IMAGE_NAME)
@@ -190,8 +190,12 @@ docker/build/full: build/clean build/linux
 	#@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t $(IMAGE_NAME) -f Dockerfile_full .
 	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -f Dockerfile_full .
 
+docker/publish: build/clean build/linux docker/build
+	@docker build --foroe-rm=true --push --platform linux/amd64,linux/arm64  -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -t $(IMAGE_NAME) -f Dockerfile_full .
+
+
 docker/build/gowvp: build/clean build/linux
-	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest -f Dockerfile .
+	@docker build --force-rm=true --push --platform linux/amd64 -t registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest -f Dockerfile .
 
 
 # ==================================================================================== #

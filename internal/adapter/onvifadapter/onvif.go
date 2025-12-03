@@ -220,6 +220,9 @@ func (a *Adapter) queryAndSaveProfiles(ctx context.Context, device *ipc.Device, 
 		}
 		channels = append(channels, channel)
 	}
+	if len(channels) == 0 {
+		return fmt.Errorf("没有找到 ONVIF 通道")
+	}
 
 	// 使用统一的 SaveChannels 方法保存（自动处理增删改）
 	if err := a.adapter.SaveChannels(channels); err != nil {
@@ -255,11 +258,10 @@ func buildPlayURL(rawurl, username, password string) string {
 }
 
 func (a *Adapter) Discover(ctx context.Context, w io.Writer) error {
-	recv, cancel, err := onvif.AllAvailableDevicesAtSpecificEthernetInterfaces()
+	recv, err := onvif.AllAvailableDevicesAtSpecificEthernetInterfaces()
 	if err != nil {
 		return err
 	}
-	defer cancel()
 
 	for {
 		select {

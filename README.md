@@ -1,3 +1,4 @@
+**中文** | [English](./README_EN.md)
 
 <p align="center">
     <img src="./docs/logo.png" alt="GoWVP Logo" width="550"/>
@@ -5,7 +6,6 @@
 
 <p align="center">
     <a href="https://github.com/gowvp/gb28181/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
-    <!-- <a href="https://github.com/ixugo/goddd/blob/master/LICENSE.txt"><img src="https://img.shields.io/dub/l/vibe-d.svg" alt="License"/></a> -->
 </p>
 
 # 开箱即用的视频监控平台
@@ -37,7 +37,14 @@ go wvp 是 Go 语言实现的开源 GB28181 解决方案，基于 GB28181-2022 �
 
 感谢 @panjjo 大佬的开源库 [panjjo/gosip](https://github.com/panjjo/gosip)，GoWVP 的 sip 信令基于此库，出于底层封装需要，并非直接依赖该项目，而是源代码放到了 pkg 包中。
 
-流媒体服务基于@夏楚 [ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
+流媒体服务支持两种
+
++ @夏楚 [ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
+
++ **lalmax-pro 有 golang 流媒体的需求请联系微信 [golangxx](https://github.com/ixugo)**
+  - 对环境没有要求，不需要安装任何静态库，支持跨平台编译
+  - 支持特色功能定制
+  - 支持 G711(G711A/G711U) 转 AAC
 
 播放器使用@dexter [jessibuca](https://github.com/langhuihui/jessibuca/tree/v3)
 

@@ -65,7 +65,7 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream strin
 
 // QueryCatalog implements ipc.Protocoler.
 func (a *Adapter) QueryCatalog(ctx context.Context, device *ipc.Device) error {
-	panic("unimplemented")
+	return a.gbs.QueryCatalog(device.DeviceID)
 }
 
 // StartPlay implements ipc.Protocoler.

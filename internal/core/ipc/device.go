@@ -131,7 +131,7 @@ func (c Core) AddDevice(ctx context.Context, in *AddDeviceInput) (*Device, error
 	// 初始化协议连接（失败不影响设备添加）
 	if protocol, ok := c.protocols[out.GetType()]; ok {
 		if err := protocol.InitDevice(ctx, &out); err != nil {
-			slog.WarnContext(ctx, "初始化协议失败", "err", err, "device_id", out.ID)
+			return nil, reason.ErrBadRequest.SetMsg(err.Error())
 		}
 	}
 
@@ -192,4 +192,15 @@ func (c Core) DelDevice(ctx context.Context, id string) (*Device, error) {
 	}
 
 	return &dev, nil
+}
+
+func (c Core) QueryCatalog(ctx context.Context, deviceID string) error {
+	device, err := c.GetDeviceByDeviceID(ctx, deviceID)
+	if err != nil {
+		return err
+	}
+	if err := c.protocols[device.GetType()].QueryCatalog(ctx, device); err != nil {
+		return reason.ErrBadRequest.SetMsg(err.Error())
+	}
+	return nil
 }

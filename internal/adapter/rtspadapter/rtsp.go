@@ -6,7 +6,6 @@ import (
 	"github.com/gowvp/gb28181/internal/core/ipc"
 	"github.com/gowvp/gb28181/internal/core/proxy"
 	"github.com/gowvp/gb28181/internal/core/sms"
-	"github.com/gowvp/gb28181/pkg/zlm"
 )
 
 var _ ipc.Protocoler = (*Adapter)(nil)
@@ -49,20 +48,11 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream strin
 	if err != nil {
 		return err
 	}
-	resp, err := a.smsCore.AddStreamProxy(svr, zlm.AddStreamProxyRequest{
-		Vhost:         "__defaultVhost__",
-		App:           proxy.App,
-		Stream:        proxy.Stream,
-		URL:           proxy.SourceURL,
-		RetryCount:    3,
-		RTPType:       proxy.Transport,
-		TimeoutSec:    10,
-		EnableHLSFMP4: zlm.NewBool(true),
-		EnableAudio:   zlm.NewBool(true),
-		EnableRTSP:    zlm.NewBool(true),
-		EnableRTMP:    zlm.NewBool(true),
-		AddMuteAudio:  zlm.NewBool(true),
-		AutoClose:     zlm.NewBool(true),
+	resp, err := a.smsCore.AddStreamProxy(svr, sms.AddStreamProxyRequest{
+		App:     proxy.App,
+		Stream:  proxy.Stream,
+		URL:     proxy.SourceURL,
+		RTPType: proxy.Transport,
 	})
 	if err != nil {
 		return err

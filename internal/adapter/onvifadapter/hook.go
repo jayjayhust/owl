@@ -7,7 +7,6 @@ import (
 
 	"github.com/gowvp/gb28181/internal/core/ipc"
 	"github.com/gowvp/gb28181/internal/core/sms"
-	"github.com/gowvp/gb28181/pkg/zlm"
 	"github.com/ixugo/goddd/pkg/orm"
 )
 
@@ -42,19 +41,10 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app, stream string) erro
 		return err
 	}
 
-	_, err = a.sms.AddStreamProxy(svr, zlm.AddStreamProxyRequest{
-		Vhost:         "__defaultVhost__",
-		App:           app,
-		Stream:        stream,
-		URL:           streamURI,
-		RetryCount:    3,
-		TimeoutSec:    10,
-		EnableHLSFMP4: zlm.NewBool(true),
-		EnableAudio:   zlm.NewBool(true),
-		EnableRTSP:    zlm.NewBool(true),
-		EnableRTMP:    zlm.NewBool(true),
-		AddMuteAudio:  zlm.NewBool(true),
-		AutoClose:     zlm.NewBool(true),
+	_, err = a.sms.AddStreamProxy(svr, sms.AddStreamProxyRequest{
+		App:    app,
+		Stream: stream,
+		URL:    streamURI,
 	})
 	if err == nil {
 		if err := a.adapter.EditPlaying(ctx, ch.DeviceID, ch.ChannelID, true); err != nil {

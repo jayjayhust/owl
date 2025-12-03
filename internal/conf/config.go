@@ -75,6 +75,7 @@ type Media struct {
 	IP           string `comment:"媒体服务器 IP"`
 	HTTPPort     int    `comment:"媒体服务器 HTTP 端口"`
 	Secret       string `comment:"媒体服务器密钥"`
+	Type         string `comment:"媒体服务器类型 zlm/lalmax"`
 	WebHookIP    string `comment:"用于流媒体 webhook 回调"`
 	RTPPortRange string `comment:"媒体服务器 RTP 端口范围"`
 	SDPIP        string `comment:"媒体服务器 SDP IP"`

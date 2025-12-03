@@ -20,24 +20,42 @@ import (
 type WarpMediaServer struct {
 	IsOnline      bool
 	LastUpdatedAt time.Time
+	Config        *MediaServer
 }
 
 type NodeManager struct {
 	storer Storer
 
-	zlm          zlm.Engine
+	drivers      map[string]Driver
 	cacheServers conc.Map[string, *WarpMediaServer]
 	quit         chan struct{}
 }
 
 func NewNodeManager(storer Storer) *NodeManager {
 	n := NodeManager{
-		storer: storer,
-		zlm:    zlm.NewEngine(),
-		quit:   make(chan struct{}, 1),
+		storer:  storer,
+		drivers: make(map[string]Driver),
+		quit:    make(chan struct{}, 1),
 	}
+	n.RegisterDriver(ProtocolZLMediaKit, NewZLMDriver())
+	n.RegisterDriver(ProtocolLalmax, NewLalmaxDriver())
 	go n.tickCheck()
 	return &n
+}
+
+func (n *NodeManager) RegisterDriver(name string, driver Driver) {
+	n.drivers[name] = driver
+}
+
+func (n *NodeManager) getDriver(name string) (Driver, error) {
+	if name == "" {
+		name = "zlm"
+	}
+	d, ok := n.drivers[name]
+	if !ok {
+		return nil, fmt.Errorf("driver [%s] not found", name)
+	}
+	return d, nil
 }
 
 func (n *NodeManager) Close() {
@@ -53,11 +71,29 @@ func (n *NodeManager) tickCheck() {
 		case <-n.quit:
 			return
 		case <-ticker.C:
-			// TODO: 前期先固定保活，后期优化
 			const KeepaliveInterval = 2 * 15 * time.Second
 			n.cacheServers.Range(func(_ string, ms *WarpMediaServer) bool {
-				isOffline := time.Since(ms.LastUpdatedAt) >= KeepaliveInterval
-				ms.IsOnline = !isOffline
+				if time.Since(ms.LastUpdatedAt) < KeepaliveInterval {
+					ms.IsOnline = true
+					return true
+				}
+
+				// 尝试主动探测
+				if ms.Config != nil {
+					driver, err := n.getDriver(ms.Config.Type)
+					if err == nil {
+						ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+						if err := driver.Ping(ctx, ms.Config); err == nil {
+							ms.LastUpdatedAt = time.Now()
+							ms.IsOnline = true
+							cancel()
+							return true
+						}
+						cancel()
+					}
+				}
+
+				ms.IsOnline = false
 				return true
 			})
 		}
@@ -99,16 +135,18 @@ func setupSecret(bc *conf.Bootstrap) {
 
 func (n *NodeManager) Run(bc *conf.Bootstrap, serverPort int) error {
 	ctx := context.Background()
-
 	setupSecret(bc)
 	cfg := bc.Media
-
 	setValueFn := func(ms *MediaServer) {
 		ms.ID = DefaultMediaServerID
 		ms.IP = cfg.IP
 		ms.Ports.HTTP = cfg.HTTPPort
 		ms.Secret = cfg.Secret
-		ms.Type = "zlm"
+		ms.Type = cfg.Type
+		// TODO: 应该读取环境变量
+		if ms.Type == "" {
+			ms.Type = ProtocolZLMediaKit
+		}
 		ms.Status = false
 		ms.RTPPortRange = cfg.RTPPortRange
 		ms.HookIP = cfg.WebHookIP
@@ -136,7 +174,11 @@ func (n *NodeManager) Run(bc *conf.Bootstrap, serverPort int) error {
 	}
 
 	for _, ms := range mediaServers {
-		go n.connection(ms, serverPort)
+		go func(ms *MediaServer) {
+			if err := n.connection(ms, serverPort); err != nil {
+				slog.Error("Connect media server failed", "id", ms.ID, "err", err)
+			}
+		}(ms)
 	}
 
 	return nil
@@ -145,105 +187,40 @@ func (n *NodeManager) Run(bc *conf.Bootstrap, serverPort int) error {
 func (n *NodeManager) connection(server *MediaServer, serverPort int) error {
 	n.cacheServers.Store(server.ID, &WarpMediaServer{
 		LastUpdatedAt: time.Now(),
+		Config:        server,
 	})
 
-	url := fmt.Sprintf("http://%s:%d", server.IP, server.Ports.HTTP)
-	engine := n.zlm.SetConfig(zlm.Config{
-		URL:    url,
-		Secret: server.Secret,
-	})
-
-	log := slog.With("url", url, "id", server.ID)
-
-	log.Info("ZLM 服务节点连接中")
-
-	resp, err := engine.GetServerConfig()
+	driver, err := n.getDriver(server.Type)
 	if err != nil {
-		log.Error("ZLM 服务节点连接失败", "err", err)
+		slog.Error("获取驱动失败", "type", server.Type, "err", err)
 		return err
 	}
-	log.Info("ZLM 服务节点连接成功")
 
-	if len(resp.Data) == 0 {
-		log.Error("ZLM 服务节点配置为空")
-		return fmt.Errorf("配置失败, code[%d] msg[%s]", resp.Code, resp.Msg)
+	log := slog.With("id", server.ID, "type", server.Type)
+	log.Info("MediaServer 连接中...")
+
+	ctx := context.Background()
+	if err := driver.Connect(ctx, server); err != nil {
+		log.Error("MediaServer 连接失败", "err", err)
+		return err
 	}
+	log.Info("MediaServer 连接成功")
 
-	zlmConfig := resp.Data[0]
-	var ms MediaServer
-	if err := n.storer.MediaServer().Edit(context.Background(), &ms, func(b *MediaServer) {
-		// b.Ports.FLV = zlmConfig.HTTPPort
-		// TODO: 映射的端口，会导致获取配置文件的端口不一定能访问
-		http := server.Ports.HTTP
-		b.Ports.FLV = http
-		b.Ports.WsFLV = http //   zlmConfig.HTTPSslport
-		b.Ports.HTTPS = zlmConfig.HTTPSslport
-		b.Ports.RTMP = zlmConfig.RtmpPort
-		b.Ports.RTMPs = zlmConfig.RtmpSslport
-		b.Ports.RTSP = zlmConfig.RtspPort
-		b.Ports.RTSPs = zlmConfig.RtspSslport
-		b.Ports.RTPPorxy = zlmConfig.RtpProxyPort
-		b.Ports.FLVs = zlmConfig.HTTPSslport
-		b.Ports.WsFLVs = zlmConfig.HTTPSslport
-		b.HookAliveInterval = 10
-		b.Status = true
+	// 更新数据库中的端口信息等
+	if err := n.storer.MediaServer().Edit(ctx, &MediaServer{}, func(b *MediaServer) {
+		// 更新字段
+		b.Ports = server.Ports
+		b.HookAliveInterval = server.HookAliveInterval
+		b.Status = server.Status
 	}, orm.Where("id=?", server.ID)); err != nil {
 		panic(fmt.Errorf("保存 MediaServer 失败 %w", err))
 	}
 
-	log.Info("ZLM 服务节点配置设置")
-
+	log.Info("MediaServer 配置设置...")
 	hookPrefix := fmt.Sprintf("http://%s:%d/webhook", server.HookIP, serverPort)
-
-	req := zlm.SetServerConfigRequest{
-		RtcExternIP:          zlm.NewString(server.IP),
-		GeneralMediaServerID: zlm.NewString(server.ID),
-		HookEnable:           zlm.NewString("1"),
-		HookOnFlowReport:     zlm.NewString(""),
-		HookOnPlay:           zlm.NewString(fmt.Sprintf("%s/on_play", hookPrefix)),
-
-		// HookOnHTTPAccess:     zlm.NewString(""),
-		// 仅开启 hls_fmp4
-		ProtocolEnableTs:      zlm.NewString("0"),
-		ProtocolEnableFmp4:    zlm.NewString("0"),
-		ProtocolEnableHls:     zlm.NewString("0"),
-		ProtocolEnableHlsFmp4: zlm.NewString("1"),
-
-		HookOnPublish:                  zlm.NewString(fmt.Sprintf("%s/on_publish", hookPrefix)),
-		HookOnStreamNoneReader:         zlm.NewString(fmt.Sprintf("%s/on_stream_none_reader", hookPrefix)),
-		GeneralStreamNoneReaderDelayMS: zlm.NewString("30000"),
-		HookOnStreamNotFound:           zlm.NewString(fmt.Sprintf("%s/on_stream_not_found", hookPrefix)),
-		HookOnRecordTs:                 zlm.NewString(""),
-		HookOnRtspAuth:                 zlm.NewString(""),
-		HookOnRtspRealm:                zlm.NewString(""),
-		// HookOnServerStarted: ,
-		HookOnShellLogin:    zlm.NewString(""),
-		HookOnStreamChanged: zlm.NewString(fmt.Sprintf("%s/on_stream_changed", hookPrefix)),
-		// HookOnStreamNotFound: ,
-		HookOnServerKeepalive: zlm.NewString(fmt.Sprintf("%s/on_server_keepalive", hookPrefix)),
-		// HookOnSendRtpStopped: ,
-		// HookOnRtpServerTimeout: ,
-		// HookOnRecordMp4: ,
-		HookTimeoutSec: zlm.NewString("20"),
-		// TODO: 回调时间间隔有问题
-		HookAliveInterval: zlm.NewString(fmt.Sprint(server.HookAliveInterval)),
-		// 推流断开后可以在超时时间内重新连接上继续推流，这样播放器会接着播放。
-		// 置0关闭此特性(推流断开会导致立即断开播放器)
-		// 此参数不应大于播放器超时时间
-		// 优化此消息以更快的收到流注销事件
-		ProtocolContinuePushMs: zlm.NewString("3000"),
-		RtpProxyPortRange:      &server.RTPPortRange,
-		FfmpegLog:              zlm.NewString("./fflogs/ffmpeg.log"),
-	}
-
-	{
-		resp, err := engine.SetServerConfig(&req)
-		if err != nil {
-			log.Error("ZLM 服务节点配置设置失败", "err", err)
-			return err
-		}
-
-		log.Info("ZLM 服务节点配置设置成功", "changed", resp.Changed)
+	if err := driver.Setup(ctx, server, hookPrefix); err != nil {
+		log.Error("MediaServer 配置设置失败", "err", err)
+		return err
 	}
 
 	return nil
@@ -269,34 +246,35 @@ func (n *NodeManager) findMediaServer(ctx context.Context, in *FindMediaServerIn
 
 // OpenRTPServer 开启RTP服务器
 func (n *NodeManager) OpenRTPServer(server *MediaServer, in zlm.OpenRTPServerRequest) (*zlm.OpenRTPServerResponse, error) {
-	addr := fmt.Sprintf("http://%s:%d", server.IP, server.Ports.HTTP)
-	e := n.zlm.SetConfig(zlm.Config{
-		URL:    addr,
-		Secret: server.Secret,
-	})
-	return e.OpenRTPServer(in)
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.OpenRTPServer(context.Background(), server, &in)
 }
 
 // CloseRTPServer 关闭RTP服务器
-func (n *NodeManager) CloseRTPServer(in zlm.CloseRTPServerRequest) (*zlm.CloseRTPServerResponse, error) {
-	return n.zlm.CloseRTPServer(in)
+func (n *NodeManager) CloseRTPServer(server *MediaServer, in zlm.CloseRTPServerRequest) (*zlm.CloseRTPServerResponse, error) {
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.CloseRTPServer(context.Background(), server, &in)
 }
 
 // AddStreamProxy 添加流代理
-func (n *NodeManager) AddStreamProxy(server *MediaServer, in zlm.AddStreamProxyRequest) (*zlm.AddStreamProxyResponse, error) {
-	addr := fmt.Sprintf("http://%s:%d", server.IP, server.Ports.HTTP)
-	e := n.zlm.SetConfig(zlm.Config{
-		URL:    addr,
-		Secret: server.Secret,
-	})
-	return e.AddStreamProxy(in)
+func (n *NodeManager) AddStreamProxy(server *MediaServer, in AddStreamProxyRequest) (*zlm.AddStreamProxyResponse, error) {
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.AddStreamProxy(context.Background(), server, &in)
 }
 
 func (n *NodeManager) GetSnapshot(server *MediaServer, in zlm.GetSnapRequest) ([]byte, error) {
-	addr := fmt.Sprintf("http://%s:%d", server.IP, server.Ports.HTTP)
-	e := n.zlm.SetConfig(zlm.Config{
-		URL:    addr,
-		Secret: server.Secret,
-	})
-	return e.GetSnap(in)
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.GetSnapshot(context.Background(), server, &in)
 }

@@ -86,9 +86,7 @@ func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
 		group.POST("", web.WrapH(api.addDevice))                     // 添加设备（所有协议，通过 type 区分）
 		group.DELETE("/:id", web.WrapH(api.delDevice))               // 删除设备（所有协议）
 		group.GET("/channels", web.WrapH(api.FindChannelsForDevice)) // 设备与通道列表（所有协议）
-
-		// GB28181 特有功能
-		group.POST("/:id/catalog", web.WrapH(api.queryCatalog)) // 刷新通道（GB28181 特有）
+		group.POST("/:id/catalog", web.WrapH(api.queryCatalog))
 	}
 	{
 		// group := g.Group("/onvif", handler...)
@@ -151,9 +149,11 @@ func (a IPCAPI) delDevice(c *gin.Context, _ *struct{}) (any, error) {
 
 func (a IPCAPI) queryCatalog(c *gin.Context, _ *struct{}) (any, error) {
 	did := c.Param("id")
-	if err := a.uc.SipServer.QueryCatalog(did); err != nil {
+
+	if err := a.ipc.QueryCatalog(c.Request.Context(), did); err != nil {
 		return nil, ErrDevice.SetMsg(err.Error())
 	}
+
 	return gin.H{"msg": "ok"}, nil
 }
 
