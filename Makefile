@@ -190,10 +190,11 @@ docker/build/full: build/clean build/linux
 	#@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t $(IMAGE_NAME) -f Dockerfile_full .
 	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -f Dockerfile_full .
 
-docker/publish: build/clean build/linux docker/build
-	@docker build --foroe-rm=true --push --platform linux/amd64,linux/arm64  -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -t $(IMAGE_NAME) -f Dockerfile_full .
+# 发布融合镜像到镜像仓库
+docker/publish: build/clean build/linux
+	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64  -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -t $(IMAGE_NAME) -f Dockerfile_full .
 
-
+# 构建 gowvp 独立镜像
 docker/build/gowvp: build/clean build/linux
 	@docker build --force-rm=true --push --platform linux/amd64 -t registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest -f Dockerfile .
 
