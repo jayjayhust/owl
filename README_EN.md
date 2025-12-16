@@ -38,7 +38,7 @@ Two streaming media servers are supported:
 
 + @夏楚 [ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
 
-+ **lalmax-pro** - For Go streaming media needs, contact WeChat [golangxx](https://github.com/ixugo)
++ **lalmax-pro** - For Go streaming media needs, contact email xx@golang.space
   - No environment requirements, no static library installation needed, cross-platform compilation support
   - Custom feature development available
   - G711 (G711A/G711U) to AAC transcoding support
