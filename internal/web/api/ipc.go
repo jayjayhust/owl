@@ -212,7 +212,7 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 			return nil, err
 		}
 
-		app = "live"
+		app = "rtp"
 		appStream = ch.ID
 
 		mediaServerID = sms.DefaultMediaServerID
