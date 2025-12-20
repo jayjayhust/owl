@@ -1,4 +1,5 @@
-**中文** | [English](./README_EN.md)
+
+**English** | [中文](./README_CN.md)
 
 <p align="center">
     <img src="./docs/logo.png" alt="GoWVP Logo" width="550"/>
@@ -8,105 +9,101 @@
     <a href="https://github.com/gowvp/gb28181/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
 </p>
 
-# 开箱即用的视频监控平台
+# Out-of-the-Box Video Surveillance Platform
 
-go wvp 是 Go 语言实现的开源 GB28181 解决方案，基于 GB28181-2022 标准实现的网络视频平台，同时支持 2016/2011 版本，支持 ONVIF/RTMP/RTSP 等协议。
+GoWVP is an open-source GB28181 solution implemented in Go, a network video platform based on the GB28181-2022 standard that also supports 2016/2011 versions, with ONVIF/RTMP/RTSP protocol support.
 
-## 在线演示平台
+## Live Demo
 
-+ [在线演示平台 :) ](http://gowvp.golang.space:15123/)
++ [Online Demo Platform :)](http://gowvp.golang.space:15123/)
 
 ![](./docs/demo/play.gif)
-
-
 
 |![](./docs/phone/login.webp)|![](./docs/phone/desktop.webp)|![](./docs/phone/gb28181.webp)|![](./docs/phone/discover.webp)|
 |-|-|-|-|
 
+## Use Cases
 
++ Browser-based camera video playback without plugins
++ Support for GB28181-compliant devices (IP cameras, platforms, NVRs, etc.)
++ Support for non-GB28181 devices (RTSP, RTMP, streaming devices, etc.) - maximize your existing equipment
++ Cross-network video preview
++ Deployment via Docker, Docker Compose, or Kubernetes
 
-## 应用场景：
-+ 支持浏览器无插件播放摄像头视频。
-+ 支持国标设备(摄像机、平台、NVR等)设备接入
-+ 支持非国标(rtsp, rtmp，直播设备等等)设备接入，充分利旧。
-+ 支持跨网视频预览。
-+ 支持 Docker, Docker Compose, Kubernetes 部署
+## Open Source Libraries
 
+Thanks to @panjjo for the open-source library [panjjo/gosip](https://github.com/panjjo/gosip). GoWVP's SIP signaling is based on this library. Due to underlying encapsulation requirements, it's not a direct dependency but rather included in the pkg package.
 
-## 开源库
-
-感谢 @panjjo 大佬的开源库 [panjjo/gosip](https://github.com/panjjo/gosip)，GoWVP 的 sip 信令基于此库，出于底层封装需要，并非直接依赖该项目，而是源代码放到了 pkg 包中。
-
-流媒体服务支持两种
+Two streaming media servers are supported:
 
 + @夏楚 [ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
 
-+ **lalmax-pro 有 golang 流媒体的需求请联系微信 [joezhang202512](https://github.com/joestarzxh)(备注留言gowvp)**
-  - 对环境没有要求，不需要安装任何静态库，支持跨平台编译
-  - 支持特色功能定制
-  - 支持 G711(G711A/G711U) 转 AAC
++ **lalmax-pro** - For Go streaming media needs, contact email xx@golang.space
+  - No environment requirements, no static library installation needed, cross-platform compilation support
+  - Custom feature development available
+  - G711 (G711A/G711U) to AAC transcoding support
 
-播放器使用@dexter [jessibuca](https://github.com/langhuihui/jessibuca/tree/v3)
+Player uses @dexter's [jessibuca](https://github.com/langhuihui/jessibuca/tree/v3)
 
-项目框架基于 @ixugo [goddd](https://github.com/ixugo/goddd)
+Project framework based on @ixugo's [goddd](https://github.com/ixugo/goddd)
 
-## QA
+## FAQ
 
-> 怎么没有前端资源? 如何加载网页呢?
+> Where are the frontend resources? How to load the web interface?
 
-[点击前往下载 www.zip 压缩包](https://github.com/gowvp/gb28181_web/releases/latest)
+[Click to download www.zip package](https://github.com/gowvp/gb28181_web/releases/latest)
 
-前端资源下载(打包)后放到项目根目录，命名为 `www` 即可正常加载。
+Download (packaged) frontend resources and place them in the project root directory, named `www` to load properly.
 
-> 有没有代码相关的学习资料?
+> Any learning materials about the code?
 
-[GB/T28181 开源日记[1]：从 0 到实现 GB28181 协议的完整实践](https://juejin.cn/post/7456722441395568651)
+[GB/T28181 Open Source Diary[1]: Complete Practice from 0 to Implementing GB28181 Protocol](https://juejin.cn/post/7456722441395568651)
 
-[GB/T28181 开源日记[2]：搭建服务端，解决跨域，接口联调](https://juejin.cn/post/7456796962120417314)
+[GB/T28181 Open Source Diary[2]: Setting Up Server, Solving CORS, API Integration](https://juejin.cn/post/7456796962120417314)
 
-[GB/T28181 开源日记[3]：使用 React 组件构建监控数据面板](https://juejin.cn/post/7457228085826764834)
+[GB/T28181 Open Source Diary[3]: Building Monitoring Dashboard with React Components](https://juejin.cn/post/7457228085826764834)
 
-[GB/T28181 开源日记[4]：使用 ESlint 辅助开发](https://juejin.cn/post/7461539078111789108)
+[GB/T28181 Open Source Diary[4]: Using ESLint for Development](https://juejin.cn/post/7461539078111789108)
 
-[GB/T28181 开源日记[5]：使用 react-hook-form 完成表单](https://juejin.cn/post/7461899974198181922)
+[GB/T28181 Open Source Diary[5]: Completing Forms with react-hook-form](https://juejin.cn/post/7461899974198181922)
 
-[GB/T28181 开源日记[6]：React 快速接入 jessibuca.js 播放器](https://juejin.cn/post/7462229773982351410)
+[GB/T28181 Open Source Diary[6]: Quick Integration of jessibuca.js Player in React](https://juejin.cn/post/7462229773982351410)
 
-[GB/T28181 开源日记[7]：实现 RTMP 鉴权与播放](https://juejin.cn/post/7463504223177261119)
+[GB/T28181 Open Source Diary[7]: Implementing RTMP Authentication and Playback](https://juejin.cn/post/7463504223177261119)
 
-[GB/T28181 开源日记[8]：国标开发速知速会](https://juejin.cn/post/7468626309699338294)
+[GB/T28181 Open Source Diary[8]: Quick Guide to GB28181 Development](https://juejin.cn/post/7468626309699338294)
 
-> 有没有使用资料?
+> Any usage documentation?
 
 **RTMP**
 
-[RTMP 推拉流规则](https://juejin.cn/post/7463124448540934194)
+[RTMP Push/Pull Stream Rules](https://juejin.cn/post/7463124448540934194)
 
-[如何使用 OBS RTMP 推流到 GB/T28181平台](https://juejin.cn/post/7463350947100786739)
+[How to Use OBS RTMP Push Stream to GB/T28181 Platform](https://juejin.cn/post/7463350947100786739)
 
-[海康摄像机 RTMP 推流到开源 GB/T28181 平台](https://juejin.cn/post/7468191617020313652)
+[Hikvision Camera RTMP Push Stream to Open Source GB/T28181 Platform](https://juejin.cn/post/7468191617020313652)
 
-[大华摄像机 RTMP 推流到开源 GB/T28181 平台](https://juejin.cn/spost/7468194672773021731)
+[Dahua Camera RTMP Push Stream to Open Source GB/T28181 Platform](https://juejin.cn/spost/7468194672773021731)
 
 **GB/T28181**
 
-[GB28181 七种注册姿势](https://juejin.cn/post/7465274924899532838)
+[7 Ways to Register GB28181 Devices](https://juejin.cn/post/7465274924899532838)
 
-> 播放黑屏
+> Black screen when playing
 
-查看「快捷桌面」 - 「zlm 右上角设置按钮」 - 「国标收流默认地址」
-此地址是否能被监控设备访问到
+Check "Quick Desktop" - "ZLM settings button (top right)" - "GB28181 stream receiving default address"
+Ensure this address is accessible by the surveillance device.
 
-查看「快捷桌面」 - 「zlm 右上角设置按钮」 - 「Hook IP」
-zlm 能否访问到 gowvp?? docker 合并版本填写 127.0.0.1 即可，分离部署则要明确的 IP 地址
+Check "Quick Desktop" - "ZLM settings button (top right)" - "Hook IP"
+Can ZLM access GoWVP? For Docker combined version, use 127.0.0.1. For separate deployment, use explicit IP address.
 
-> 列表项里的通道实际有 n 个，但仅显示部分
+> Channel list shows fewer channels than actual count
 
-设计如此，超过 4 个要在管理页查看，或者点击右侧的 "查看更多"
+By design. More than 4 channels should be viewed in the management page, or click "View More" on the right.
 
-> 使用了 nginx 反向代理，返回的播放地址无法播放或不加载快照
+> Using nginx reverse proxy, returned playback addresses don't work or snapshots don't load
 
-在反向代理那里配置以下参数，其中域名根据实际的填写
+Configure the following parameters in reverse proxy (replace domain with your actual one):
 
 proxy_set_header X-Forwarded-Host $host;
 
@@ -116,51 +113,45 @@ proxy_set_header Upgrade $http_upgrade;
 
 proxy_set_header Connection "upgrade";
 
+## Documentation
 
+GoWVP [Online API Documentation](https://apifox.com/apidoc/shared-7b67c918-5f72-4f64-b71d-0593d7427b93)
 
-## 文档
-
-GoWVP [在线接口文档](https://apifox.com/apidoc/shared-7b67c918-5f72-4f64-b71d-0593d7427b93)
-
-ZLM使用文档 [github.com/ZLMediaKit/ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
+ZLM Documentation [github.com/ZLMediaKit/ZLMediaKit](https://github.com/ZLMediaKit/ZLMediaKit)
 
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-<h1>看到这里啦，恭喜你发现新项目</h1>
-<h1>点个 star 不迷路</h1>
+<h1>You've made it this far!</h1>
+<h1>Give us a ⭐ star!</h1>
 // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-
 
 ## Docker
 
-### 视频指南
+### Video Guide
 
-[如何构建或运行项目](https://www.bilibili.com/video/BV1QLQeYHEXb)
+[How to Build or Run the Project](https://www.bilibili.com/video/BV1QLQeYHEXb)
 
-[如何用 docker compose 部署项目](https://www.bilibili.com/video/BV112QYY3EZX)
+[How to Deploy with Docker Compose](https://www.bilibili.com/video/BV112QYY3EZX)
 
+[Docker Hub](https://hub.docker.com/r/gospace/gowvp)
 
+**GoWVP & ZLMediaKit Combined Image (Recommended)**
 
-
-[docker hub](https://hub.docker.com/r/gospace/gowvp)
-
-
-
-** gowvp & zlmediakit 融合镜像(推荐)**
 docker-compose.yml
+
 ```yml
 services:
   gowvp:
-    # 如果拉不到 docker hub 镜像，也可以尝试
+    # If Docker Hub image is unavailable, try:
     # registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest
     image: gospace/gowvp:latest
     restart: unless-stopped
-    # linux 解开下行注释，并将 ports 全部注释
+    # For Linux, uncomment the line below and comment out all ports
     # network_mode: host
     ports:
       # gb28181
-      - 15123:15123 # 管理平台 http 端口
-      - 15060:15060 # gb28181 sip tcp 端口
-      - 15060:15060/udp # gb28181 sip udp 端口
+      - 15123:15123 # Management platform HTTP port
+      - 15060:15060 # GB28181 SIP TCP port
+      - 15060:15060/udp # GB28181 SIP UDP port
       # zlm
       - 1935:1935 # rtmp
       - 554:554 # rtsp
@@ -169,31 +160,32 @@ services:
       - 10000:10000
       - 8000:8000/udp
       - 9000:9000/udp
-      - 20000-20100:20000-20100 # gb28181 收流端口
-      - 20000-20100:20000-20100/udp # gb28181 收流端口udp
+      - 20000-20100:20000-20100 # GB28181 stream receiving ports
+      - 20000-20100:20000-20100/udp # GB28181 stream receiving UDP ports
     volumes:
-      # 日志目录是 configs/logs
+      # Log directory is configs/logs
       - ./data:/opt/media/bin/configs
 ```
 
-** gowvp & zlmediakit 分离镜像(部署更复杂)**
+**GoWVP & ZLMediaKit Separate Images (More Complex Deployment)**
+
 ```yml
 services:
   gowvp:
     image: registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest
     ports:
-      - 15123:15123 # 管理平台 http 端口
-      - 15060:15060 # gb28181 sip tcp 端口
-      - 15060:15060/udp # gb28181 sip udp 端口
+      - 15123:15123 # Management platform HTTP port
+      - 15060:15060 # GB28181 SIP TCP port
+      - 15060:15060/udp # GB28181 SIP UDP port
     volumes:
-      # - ./logs:/app/logs # 如果需要持久化日志，请取消注释
+      # - ./logs:/app/logs # Uncomment if you need persistent logs
       - ./configs:/app/configs
     depends_on:
       - zlm
   zlm:
     image: zlmediakit/zlmediakit:master
     restart: always
-    # 推荐 linux 主机使用 host 模式
+    # Recommended: use host mode for Linux
     # network_mode: host
     ports:
       - 1935:1935 # rtmp
@@ -210,84 +202,80 @@ services:
       - ./configs:/opt/media/conf
 ```
 
+## Quick Start
 
+If you're a Go developer familiar with Docker, you can download the source code and run locally.
 
-## 快速开始
-
-如果你是 Go 语言开发者并熟悉 docker，可以下载源代码，本地编程运行。
-
-**前置条件**
+**Prerequisites**
 
 + Golang
 + Docker & Docker Compose
 + Make
 
-**操作流程**
+**Steps**
 
-+ 1. 克隆本项目
-+ 2. 修改 configs/config.toml 中 `WebHookIP` 为你的局域网 IP
-+ 3. 执行 `make build/linux && docker compose up -d`
-+ 4. 自动创建了 zlm.conf 文件夹，获取 config.ini 的 api 秘钥，填写到 `configs/config.toml` 的 `Secret`
-+ 5. 执行 `docker compose restart`
-+ 6. 浏览器访问 `http://localhost:15123`
+1. Clone this repository
+2. Modify `WebHookIP` in `configs/config.toml` to your LAN IP
+3. Run `make build/linux && docker compose up -d`
+4. A `zlm.conf` folder is auto-created. Get the API secret from `config.ini` and fill it in `configs/config.toml` under `Secret`
+5. Run `docker compose restart`
+6. Access `http://localhost:15123` in your browser
 
+## How to Contribute?
 
-##  如何参与开发?
+1. Fork this project
+2. Set your editor's run/debug output directory to the project root
+3. Make changes, submit a PR with description of modifications
 
-1. fork 本项目
-2. 编辑器 run/debug 设置配置输出目录为项目根目录
-3. 修改，提交 PR，说明修改内容
+## Features
 
-## 功能特性
-
-- [x] 开箱即用，支持 web
-- [x] 支持 rtmp 流分发
-- [x] 支持 rtsp 流分发
-- [x] 支持输出 HTTP_FLV,Websocket_FLV,HLS,WebRTC,RTSP、RTMP 等多种协议流地址
-- [x] 支持局域网/互联网/多层 NAT/特殊网络环境部署
-- [x] 支持 SQLite 数据库快速部署
-- [x] 支持 PostgreSQL/MySQL 数据库
-- [x] 服务重启自动离线/自动尝试连接
+- [x] Out-of-the-box with web interface
+- [x] RTMP stream distribution support
+- [x] RTSP stream distribution support
+- [x] Multiple protocol output: HTTP_FLV, Websocket_FLV, HLS, WebRTC, RTSP, RTMP
+- [x] LAN/Internet/Multi-layer NAT/Special network environment deployment
+- [x] SQLite database for quick deployment
+- [x] PostgreSQL/MySQL database support
+- [x] Auto offline/reconnect on service restart
 - [x] GB/T 28181
-  - [x] 设备注册，支持 7 种接入方式
-  - [x] 支持 UDP 和 TCP 两种国标信令传输模式
-  - [x] 设备校时
-  - [x] 支持信息查询
-    - [x] 设备目录查询
-    - [x] 设备信息查询
-    - [x] 设备基础配置查询(例如设备侧填写超时 3 秒，次数 3 次，则 9+x 秒左右收不到心跳认为离线，x 是检测间隔周期)
-  - [x] 设备实时直播
-  - [x] 支持 UDP 和 TCP 被动两种国标流传输模式
-  - [x] 按需拉流，节省流量 (30秒无人观看自动停止)
-  - [x] 视频支持播放 H264 和 H265
-  - [x] 音频支持 g711a/g711u/aac
-  - [x] 快照
-  - [x] 支持跨域
-  - [x] 支持中文和 English
-  - [x] 支持 onvif
-  - [ ] 设备云台控制
-  - [ ] 录像回放
-  - [ ] 报警事件订阅
-  - [ ] 报警事件通知处理
+  - [x] Device registration with 7 connection methods
+  - [x] UDP and TCP signaling transport modes
+  - [x] Device time synchronization
+  - [x] Information queries support
+    - [x] Device catalog query
+    - [x] Device info query
+    - [x] Device basic config query (e.g., timeout 3s × 3 retries = ~9+x seconds for offline detection)
+  - [x] Live streaming from devices
+  - [x] UDP and TCP passive stream transport modes
+  - [x] On-demand streaming to save bandwidth (auto-stop after 30s without viewers)
+  - [x] H264 and H265 video codec support
+  - [x] g711a/g711u/aac audio codec support
+  - [x] Snapshots
+  - [x] CORS support
+  - [x] Chinese and English language support
+  - [x] ONVIF support
+  - [ ] PTZ control
+  - [ ] Recording playback
+  - [ ] Alarm event subscription
+  - [ ] Alarm event notification handling
 
+## Acknowledgments
 
-## 感谢
-
-感谢赞助，排名不分先后。
+Thanks to our sponsors (in no particular order):
 
 [@joestarzxh](https://github.com/joestarzxh)
 [@oldweipro](https://github.com/oldweipro)
 [@beixiaocai](https://github.com/beixiaocai)
 
+## License
 
-## 许可证
+This project is licensed under the **[GNU General Public License v3.0 (GPL-3.0)](https://www.gnu.org/licenses/gpl-3.0.html)**.
 
-本项目采用 **[GNU 通用公共许可证 v3.0 (GPL-3.0)](https://www.gnu.org/licenses/gpl-3.0.html)** 授权。
-  - **您可以自由使用、修改和分发本项目的代码**，但必须遵循以下条件：
-  - **开源要求**：任何基于本项目的衍生作品（包括修改后的代码或集成本项目的软件）**必须同样以 GPL-3.0 协议开源**。
-  - **保留协议与版权声明**：在衍生作品中需包含原项目的 `LICENSE` 文件及原始版权声明。
-  - **明确修改说明**：若您修改了代码，需在文件中注明变更内容。
+- **You are free to use, modify, and distribute** the code of this project, subject to the following conditions:
+- **Open Source Requirement**: Any derivative works based on this project (including modified code or software integrating this project) **must also be open-sourced under GPL-3.0**.
+- **Retain License & Copyright Notice**: Derivative works must include the original project's `LICENSE` file and copyright notices.
+- **Document Modifications**: If you modify the code, you must indicate the changes in the files.
 
-⚠ **注意**：若将本项目用于商业闭源软件或 SaaS 服务，需遵守 GPL-3.0 的传染性条款（即相关代码必须开源）。
+⚠ **Note**: If using this project for commercial closed-source software or SaaS services, you must comply with GPL-3.0's copyleft provisions (i.e., related code must be open-sourced).
 
-完整许可证文本请见 [LICENSE](./LICENSE) 文件。
+For the complete license text, see the [LICENSE](./LICENSE) file.

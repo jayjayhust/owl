@@ -3,8 +3,9 @@ FROM debian:bullseye-slim
 ENV TZ=Asia/Shanghai
 WORKDIR /opt/media/bin/
 
-RUN sed -i 's|http://deb.debian.org|http://mirrors.tuna.tsinghua.edu.cn|g; \
-            s|http://security.debian.org|http://mirrors.tuna.tsinghua.edu.cn|g' /etc/apt/sources.list
+RUN sed -i 's|http://deb.debian.org|http://mirrors.aliyun.com|g; \
+            s|http://security.debian.org|http://mirrors.aliyun.com|g' /etc/apt/sources.list
+
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
