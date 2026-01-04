@@ -1,3 +1,3 @@
 package sms
 
-type NodeServicer interface{}
+type NodeServicer any

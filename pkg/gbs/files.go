@@ -50,7 +50,7 @@ type apiRecordItem struct {
 	id     string
 }
 
-func (ri *apiRecordItem) Start() (string, interface{}) {
+func (ri *apiRecordItem) Start() (string, any) {
 	if config.Record.Recordmax <= 0 {
 		return m.StatusSysERR, errors.New("config record max time invalid.")
 	}
@@ -86,7 +86,7 @@ func (ri *apiRecordItem) Start() (string, interface{}) {
 	return m.StatusSucc, ri.id
 }
 
-func (ri *apiRecordItem) Stop() (string, interface{}) {
+func (ri *apiRecordItem) Stop() (string, any) {
 	err := zlmStopRecord(ri.params)
 	if err != nil {
 		return m.StatusSysERR, ""

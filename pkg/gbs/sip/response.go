@@ -39,11 +39,10 @@ func NewResponseFromRequest(
 		if _, ok := to.Params.Get("tag"); !ok {
 			to.Params.Add("tag", String{Str: RandString(32)})
 		}
+		res.AppendHeader(to)
 	}
 	CopyHeaders("CSeq", req, res)
 	CopyHeaders("Call-ID", req, res)
-
-	res.AppendHeader(to)
 
 	if statusCode == 100 {
 		CopyHeaders("Timestamp", req, res)

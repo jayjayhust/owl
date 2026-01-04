@@ -103,6 +103,8 @@ func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
 		group.POST("/:id/play", web.WrapH(api.play))                // 播放（所有协议）
 		group.POST("/:id/snapshot", web.WrapH(api.refreshSnapshot)) // 图像抓拍（所有协议）
 		group.GET("/:id/snapshot", api.getSnapshot)                 // 获取图像（所有协议）
+		group.POST("/:id/zones", web.WrapH(api.addZone))            // 添加区域（所有协议）
+		group.GET("/:id/zones", web.WrapH(api.getZones))            // 获取区域（所有协议）
 	}
 }
 
@@ -285,6 +287,7 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 		for range 2 {
 			time.Sleep(3 * time.Second)
 			rtsp := fmt.Sprintf("rtsp://%s:%d/%s", "127.0.0.1", svr.Ports.RTSP, stream) + "?" + session
+
 			body, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, sms.GetSnapRequest{
 				GetSnapRequest: zlm.GetSnapRequest{
 					URL:        rtsp,
@@ -360,6 +363,20 @@ func (a IPCAPI) refreshSnapshot(c *gin.Context, in *refreshSnapshotInput) (any, 
 	}
 
 	return gin.H{"link": fmt.Sprintf("%s/channels/%s/snapshot?token=%s", prefix, channelID, token)}, nil
+}
+
+func (a IPCAPI) addZone(c *gin.Context, in *ipc.AddZoneInput) (gin.H, error) {
+	channelID := c.Param("id")
+	if len(in.Labels) == 0 {
+		in.Labels = []string{"person", "car", "cat", "dog"}
+	}
+	zones, err := a.ipc.AddZone(c.Request.Context(), in, channelID)
+	return gin.H{"items": zones}, err
+}
+
+func (a IPCAPI) getZones(c *gin.Context, _ *struct{}) (any, error) {
+	channelID := c.Param("id")
+	return a.ipc.GetZones(c.Request.Context(), channelID)
 }
 
 func (a IPCAPI) getSnapshot(c *gin.Context) {

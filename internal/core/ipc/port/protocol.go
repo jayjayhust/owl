@@ -6,15 +6,10 @@ import (
 
 // Device 设备接口
 // 注意: 适配器实现时，参数类型为 *ipc.Device，满足此接口
-type Device interface {
-	// 这里不定义任何方法，让所有类型都能满足
-	// 适配器实现时直接使用 *ipc.Device 类型
-}
+type Device any
 
 // Channel 通道接口
-type Channel interface {
-	// 同上
-}
+type Channel any
 
 // Protocol 协议抽象接口（端口）
 //

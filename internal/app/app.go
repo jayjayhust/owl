@@ -35,7 +35,7 @@ func Run(bc *conf.Bootstrap) {
 	go setupZLM(ctx, bc.ConfigDir)
 
 	// 如果需要执行表迁移，递增此版本号和表更新说明
-	versionapi.DBVersion = "0.0.17"
+	versionapi.DBVersion = "0.0.18"
 	versionapi.DBRemark = "onvif device support"
 
 	handler, cleanUp, err := wireApp(bc, log)

@@ -346,8 +346,8 @@ func parseAccept(headerName string, headerText string) (headers []Header, err er
 
 func parseAllow(headerName string, headerText string) (headers []Header, err error) {
 	allow := make(AllowHeader, 0)
-	methods := strings.Split(headerText, ",")
-	for _, method := range methods {
+	methods := strings.SplitSeq(headerText, ",")
+	for method := range methods {
 		allow = append(allow, string(strings.TrimSpace(method)))
 	}
 	headers = []Header{allow}
@@ -358,8 +358,8 @@ func parseAllow(headerName string, headerText string) (headers []Header, err err
 func parseSupported(headerName string, headerText string) (headers []Header, err error) {
 	var supported SupportedHeader
 	supported.Options = make([]string, 0)
-	extensions := strings.Split(headerText, ",")
-	for _, ext := range extensions {
+	extensions := strings.SplitSeq(headerText, ",")
+	for ext := range extensions {
 		supported.Options = append(supported.Options, strings.TrimSpace(ext))
 	}
 	headers = []Header{&supported}
@@ -411,6 +411,11 @@ func ParseAddressValues(addresses string) (
 			var params Params
 			displayName, uri, params, err = ParseAddressValue(addresses[prevIdx:idx])
 			if err != nil {
+				// sip:1678@80.79.5.134;expires=3600
+				arr := strings.Split(addresses, "@")
+				if len(arr) == 2 && len(arr[0]) < 20 {
+					err = nil
+				}
 				return
 			}
 			prevIdx = idx + 1
@@ -782,19 +787,19 @@ func ParseURI(uriStr string) (uri *URI, err error) {
 		return
 	}
 
-	colonIdx := strings.Index(uriStr, ":")
-	if colonIdx == -1 {
+	before, _, ok := strings.Cut(uriStr, ":")
+	if !ok {
 		err = fmt.Errorf("no ':' in URI %s", uriStr)
 		return
 	}
 
-	switch strings.ToLower(uriStr[:colonIdx]) {
+	switch strings.ToLower(before) {
 	case "sip", "sips":
 		var sipURI URI
 		sipURI, err = ParseSipURI(uriStr)
 		uri = &sipURI
 	default:
-		err = fmt.Errorf("unsupported URI schema %s", uriStr[:colonIdx])
+		err = fmt.Errorf("unsupported URI schema %s", before)
 	}
 
 	return
@@ -908,8 +913,8 @@ func ParseSipURI(uriStr string) (uri URI, err error) {
 // The port may or may not be present, so we represent it with a *uint16,
 // and return 'nil' if no port was present.
 func ParseHostPort(rawText string) (host string, port *Port, err error) {
-	colonIdx := strings.Index(rawText, ":")
-	if colonIdx == -1 {
+	before, after, ok := strings.Cut(rawText, ":")
+	if !ok {
 		host = rawText
 		return
 	}
@@ -917,8 +922,8 @@ func ParseHostPort(rawText string) (host string, port *Port, err error) {
 	// Surely there must be a better way..!
 	var portRaw64 uint64
 	var portRaw16 uint16
-	host = rawText[:colonIdx]
-	portRaw64, err = strconv.ParseUint(rawText[colonIdx+1:], 10, 16)
+	host = before
+	portRaw64, err = strconv.ParseUint(after, 10, 16)
 	portRaw16 = uint16(portRaw64)
 	port = (*Port)(&portRaw16)
 
@@ -1079,15 +1084,15 @@ parseLoop:
 func ParseHeader(headerText string) (headers []Header, err error) {
 	headers = make([]Header, 0)
 
-	colonIdx := strings.Index(headerText, ":")
-	if colonIdx == -1 {
+	before, after, ok := strings.Cut(headerText, ":")
+	if !ok {
 		err = fmt.Errorf("field name with no value in header: %s", headerText)
 		return
 	}
 
-	fieldName := strings.TrimSpace(headerText[:colonIdx])
+	fieldName := strings.TrimSpace(before)
 	lowerFieldName := strings.ToLower(fieldName)
-	fieldText := strings.TrimSpace(headerText[colonIdx+1:])
+	fieldText := strings.TrimSpace(after)
 	if headerParser, ok := defaultHeaderParsers[lowerFieldName]; ok {
 		// We have a registered parser for this header type - use it.
 		headers, err = headerParser(lowerFieldName, fieldText)

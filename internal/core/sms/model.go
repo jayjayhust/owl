@@ -24,7 +24,7 @@ type MediaServerPorts struct {
 }
 
 // Scan implements orm.Scaner.
-func (i *MediaServerPorts) Scan(input interface{}) error {
+func (i *MediaServerPorts) Scan(input any) error {
 	return orm.JSONUnmarshal(input, i)
 }
 

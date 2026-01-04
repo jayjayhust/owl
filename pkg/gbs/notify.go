@@ -22,8 +22,8 @@ const (
 
 // Notify 消息通知结构
 type Notify struct {
-	Method string      `json:"method"`
-	Data   interface{} `json:"data"`
+	Method string `json:"method"`
+	Data   any    `json:"data"`
 }
 
 func notify(data *Notify) {
@@ -45,7 +45,7 @@ func notify(data *Notify) {
 func notifyDevicesAcitve(id, status string) *Notify {
 	return &Notify{
 		Method: NotifyMethodDevicesActive,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"deviceid": id,
 			"status":   status,
 			"time":     time.Now().Unix(),
@@ -64,7 +64,7 @@ func notifyDevicesRegister(u Devices) *Notify {
 func notifyChannelsActive(d Channels) *Notify {
 	return &Notify{
 		Method: NotifyMethodChannelsActive,
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"channelid": d.ChannelID,
 			"status":    d.Status,
 			"time":      time.Now().Unix(),
@@ -73,7 +73,7 @@ func notifyChannelsActive(d Channels) *Notify {
 }
 
 func notifyRecordStop(url string, req url.Values) *Notify {
-	d := map[string]interface{}{
+	d := map[string]any{
 		"url": fmt.Sprintf("%s/%s", config.Media.HTTP, url),
 	}
 	for k, v := range req {

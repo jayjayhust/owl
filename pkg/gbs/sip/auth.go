@@ -50,7 +50,7 @@ func AuthFromValue(value string) *Authorization {
 		case "response":
 			auth.response = match[2]
 		case "qop":
-			for _, v := range strings.Split(match[2], ",") {
+			for v := range strings.SplitSeq(match[2], ",") {
 				v = strings.Trim(v, " ")
 				if v == "auth" || v == "auth-int" {
 					auth.qop = "auth"

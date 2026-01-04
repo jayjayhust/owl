@@ -8,7 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
+
 	"log/slog"
 	"math/rand"
 	"net"
@@ -24,7 +24,7 @@ import (
 // Error Error
 type Error struct {
 	err    error
-	params []interface{}
+	params []any
 }
 
 func (err *Error) Error() string {
@@ -39,12 +39,12 @@ func (err *Error) Error() string {
 }
 
 // NewError NewError
-func NewError(err error, params ...interface{}) error {
+func NewError(err error, params ...any) error {
 	return &Error{err, params}
 }
 
 // JSONEncode JSONEncode
-func JSONEncode(data interface{}) []byte {
+func JSONEncode(data any) []byte {
 	d, err := json.Marshal(data)
 	if err != nil {
 		slog.Error("JSONEncode error:", "err", err)
@@ -53,7 +53,7 @@ func JSONEncode(data interface{}) []byte {
 }
 
 // JSONDecode JSONDecode
-func JSONDecode(data []byte, obj interface{}) error {
+func JSONDecode(data []byte, obj any) error {
 	return json.Unmarshal(data, obj)
 }
 
@@ -131,7 +131,7 @@ func PostRequest(url string, bodyType string, body io.Reader) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 
-	respbody, err := ioutil.ReadAll(resp.Body)
+	respbody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +139,7 @@ func PostRequest(url string, bodyType string, body io.Reader) ([]byte, error) {
 }
 
 // PostJSONRequest PostJSONRequest
-func PostJSONRequest(url string, data interface{}) ([]byte, error) {
+func PostJSONRequest(url string, data any) ([]byte, error) {
 	bytesData, err := json.Marshal(data)
 	if err != nil {
 		return nil, err
@@ -164,7 +164,7 @@ func GetRequest(url string) ([]byte, error) {
 }
 
 // XMLDecode 解码 xml
-func XMLDecode(data []byte, v interface{}) error {
+func XMLDecode(data []byte, v any) error {
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
 		if utf8.Valid(data) {
@@ -181,7 +181,7 @@ func XMLDecode(data []byte, v interface{}) error {
 	return xmlDecode([]byte(value), v)
 }
 
-func xmlDecode(data []byte, v interface{}) error {
+func xmlDecode(data []byte, v any) error {
 	decoder := xml.NewDecoder(bytes.NewReader(data))
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) {
 		if utf8.Valid(data) {

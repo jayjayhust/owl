@@ -37,3 +37,7 @@ tables/
 data/
 cover/
 *.pprof
+*.go.yaml
+*.test
+*.jpg
+__pycache__/

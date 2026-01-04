@@ -38,13 +38,21 @@ type DeviceExt struct {
 	Firmware     string `json:"firmware"`     // 固件版本
 	Name         string `json:"name"`         // 设备名
 	GBVersion    string `json:"gb_version"`   // GB版本
+	Zones        []Zone `json:"zones"`        // 区域
 }
 
 // Scan implements orm.Scaner.
-func (i *DeviceExt) Scan(input interface{}) error {
+func (i *DeviceExt) Scan(input any) error {
 	return orm.JSONUnmarshal(input, i)
 }
 
 func (i DeviceExt) Value() (driver.Value, error) {
 	return json.Marshal(i)
+}
+
+type Zone struct {
+	Name        string    `json:"name"`        // 区域名称
+	Coordinates []float32 `json:"coordinates"` // 坐标
+	Color       string    `json:"color"`       // 颜色，支持 hex 颜色值，如 #FF0000
+	Labels      []string  `json:"labels"`      // 标签
 }

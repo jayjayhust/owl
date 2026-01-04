@@ -107,7 +107,7 @@ func zlmStartRecord(values url.Values) error {
 	if err != nil {
 		return err
 	}
-	tmp := map[string]interface{}{}
+	tmp := map[string]any{}
 	err = sip.JSONDecode(body, &tmp)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func zlmStopRecord(values url.Values) error {
 	if err != nil {
 		return err
 	}
-	tmp := map[string]interface{}{}
+	tmp := map[string]any{}
 	err = sip.JSONDecode(body, &tmp)
 	if err != nil {
 		return err

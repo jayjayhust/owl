@@ -232,7 +232,7 @@ type Params interface {
 	Get(key string) (MaybeString, bool)
 	Add(key string, val MaybeString) Params
 	Clone() Params
-	Equals(params interface{}) bool
+	Equals(params any) bool
 	ToString(sep uint8) string
 	String() string
 	Length() int
@@ -297,7 +297,7 @@ type Header interface {
 	// Clone returns copy of header struct.
 	Clone() Header
 	String() string
-	Equals(other interface{}) bool
+	Equals(other any) bool
 }
 
 // headers is a struct with methods to work with SIP headers.
@@ -629,7 +629,7 @@ func (params *headerParams) Length() int {
 
 // Check if two maps of parameters are equal in the sense of having the same keys with the same values.
 // This does not rely on any ordering of the keys of the map in memory.
-func (params *headerParams) Equals(other interface{}) bool {
+func (params *headerParams) Equals(other any) bool {
 	q, ok := other.(*headerParams)
 	if !ok {
 		return false
@@ -679,7 +679,7 @@ func (contentLength *ContentLength) Name() string { return "Content-Length" }
 func (contentLength *ContentLength) Clone() Header { return contentLength }
 
 // Equals Equals
-func (contentLength *ContentLength) Equals(other interface{}) bool {
+func (contentLength *ContentLength) Equals(other any) bool {
 	if h, ok := other.(ContentLength); ok {
 		if contentLength == nil {
 			return false
@@ -737,7 +737,7 @@ func (via ViaHeader) Clone() Header {
 }
 
 // Equals Equals
-func (via ViaHeader) Equals(other interface{}) bool {
+func (via ViaHeader) Equals(other any) bool {
 	if h, ok := other.(ViaHeader); ok {
 		if len(via) != len(h) {
 			return false
@@ -827,7 +827,7 @@ func (hop *ViaHop) Clone() *ViaHop {
 }
 
 // Equals Equals
-func (hop *ViaHop) Equals(other interface{}) bool {
+func (hop *ViaHop) Equals(other any) bool {
 	if h, ok := other.(*ViaHop); ok {
 		if hop == h {
 			return true
@@ -874,7 +874,7 @@ func (callId *CallID) Clone() Header {
 }
 
 // Equals Equals
-func (callId *CallID) Equals(other interface{}) bool {
+func (callId *CallID) Equals(other any) bool {
 	if h, ok := other.(CallID); ok {
 		if callId == nil {
 			return false
@@ -925,7 +925,7 @@ func (cseq *CSeq) Clone() Header {
 }
 
 // Equals Equals
-func (cseq *CSeq) Equals(other interface{}) bool {
+func (cseq *CSeq) Equals(other any) bool {
 	if h, ok := other.(*CSeq); ok {
 		if cseq == h {
 			return true
@@ -991,7 +991,7 @@ func (to *ToHeader) Clone() Header {
 }
 
 // Equals Equals
-func (to *ToHeader) Equals(other interface{}) bool {
+func (to *ToHeader) Equals(other any) bool {
 	if h, ok := other.(*ToHeader); ok {
 		if to == h {
 			return true
@@ -1087,7 +1087,7 @@ func (from *FromHeader) Clone() Header {
 }
 
 // Equals Equals
-func (from *FromHeader) Equals(other interface{}) bool {
+func (from *FromHeader) Equals(other any) bool {
 	if h, ok := other.(*FromHeader); ok {
 		if from == h {
 			return true
@@ -1142,7 +1142,7 @@ func (ct *ContentType) Name() string { return "Content-Type" }
 func (ct *ContentType) Clone() Header { return ct }
 
 // Equals Equals
-func (ct *ContentType) Equals(other interface{}) bool {
+func (ct *ContentType) Equals(other any) bool {
 	if h, ok := other.(ContentType); ok {
 		if ct == nil {
 			return false
@@ -1215,7 +1215,7 @@ func (contact *ContactHeader) Clone() Header {
 }
 
 // Equals Equals
-func (contact *ContactHeader) Equals(other interface{}) bool {
+func (contact *ContactHeader) Equals(other any) bool {
 	if h, ok := other.(*ContactHeader); ok {
 		if contact == h {
 			return true
@@ -1272,7 +1272,7 @@ func (maxForwards *MaxForwards) Name() string { return "Max-Forwards" }
 func (maxForwards *MaxForwards) Clone() Header { return maxForwards }
 
 // Equals Equals
-func (maxForwards *MaxForwards) Equals(other interface{}) bool {
+func (maxForwards *MaxForwards) Equals(other any) bool {
 	if h, ok := other.(MaxForwards); ok {
 		if maxForwards == nil {
 			return false
@@ -1310,7 +1310,7 @@ func (expires *Expires) Name() string { return "Expires" }
 func (expires *Expires) Clone() Header { return expires }
 
 // Equals Equals
-func (expires *Expires) Equals(other interface{}) bool {
+func (expires *Expires) Equals(other any) bool {
 	if h, ok := other.(Expires); ok {
 		if expires == nil {
 			return false
@@ -1348,7 +1348,7 @@ func (ua *UserAgentHeader) Name() string { return "User-Agent" }
 func (ua *UserAgentHeader) Clone() Header { return ua }
 
 // Equals equals
-func (ua *UserAgentHeader) Equals(other interface{}) bool {
+func (ua *UserAgentHeader) Equals(other any) bool {
 	if h, ok := other.(UserAgentHeader); ok {
 		if ua == nil {
 			return false
@@ -1403,7 +1403,7 @@ func (allow AllowHeader) Clone() Header {
 }
 
 // Equals equals
-func (allow AllowHeader) Equals(other interface{}) bool {
+func (allow AllowHeader) Equals(other any) bool {
 	if h, ok := other.(AllowHeader); ok {
 		if len(allow) != len(h) {
 			return false
@@ -1435,7 +1435,7 @@ func (ct *Accept) Name() string { return "Accept" }
 func (ct *Accept) Clone() Header { return ct }
 
 // Equals Equals
-func (ct *Accept) Equals(other interface{}) bool {
+func (ct *Accept) Equals(other any) bool {
 	if h, ok := other.(Accept); ok {
 		if ct == nil {
 			return false
@@ -1496,7 +1496,7 @@ func (route *RouteHeader) Clone() Header {
 }
 
 // Equals Equals
-func (route *RouteHeader) Equals(other interface{}) bool {
+func (route *RouteHeader) Equals(other any) bool {
 	if h, ok := other.(*RouteHeader); ok {
 		if route == h {
 			return true
@@ -1556,7 +1556,7 @@ func (route *RecordRouteHeader) Clone() Header {
 }
 
 // Equals Equals
-func (route *RecordRouteHeader) Equals(other interface{}) bool {
+func (route *RecordRouteHeader) Equals(other any) bool {
 	if h, ok := other.(*RecordRouteHeader); ok {
 		if route == h {
 			return true
@@ -1605,7 +1605,7 @@ func (support *SupportedHeader) Clone() Header {
 }
 
 // Equals Equals
-func (support *SupportedHeader) Equals(other interface{}) bool {
+func (support *SupportedHeader) Equals(other any) bool {
 	if h, ok := other.(*SupportedHeader); ok {
 		if support == h {
 			return true
@@ -1664,7 +1664,7 @@ func (header *GenericHeader) Clone() Header {
 }
 
 // Equals Equals
-func (header *GenericHeader) Equals(other interface{}) bool {
+func (header *GenericHeader) Equals(other any) bool {
 	if h, ok := other.(*GenericHeader); ok {
 		if header == h {
 			return true
@@ -1691,7 +1691,7 @@ func (ct XGBVer) Name() string { return "X-GB-Ver" }
 func (ct XGBVer) Clone() Header { return &ct }
 
 // Equals Equals
-func (ct *XGBVer) Equals(other interface{}) bool {
+func (ct *XGBVer) Equals(other any) bool {
 	h, ok := other.(XGBVer)
 	if !ok {
 		return false

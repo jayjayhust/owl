@@ -9,7 +9,7 @@ type Ext struct {
 }
 
 // Scan implements orm.Scaner.
-func (i *Ext) Scan(input interface{}) error {
+func (i *Ext) Scan(input any) error {
 	return orm.JSONUnmarshal(input, i)
 }
 

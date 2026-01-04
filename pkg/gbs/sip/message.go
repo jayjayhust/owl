@@ -303,7 +303,7 @@ func (uri *URI) Clone() *URI {
 
 // Equals Determine if the SIP URI is equal to the specified URI according to the rules laid down in RFC 3261 s. 19.1.4.
 // TODO: The Equals method is not currently RFC-compliant; fix this!
-func (uri *URI) Equals(val interface{}) bool {
+func (uri *URI) Equals(val any) bool {
 	otherPtr, ok := val.(*URI)
 	if !ok {
 		return false
