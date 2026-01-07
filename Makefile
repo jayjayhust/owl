@@ -31,6 +31,7 @@ init:
 	go install github.com/divan/expvarmon@latest
 	go install github.com/rakyll/hey@latest
 	go install mvdan.cc/gofumpt@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
 
 ## wire: 生成依赖注入代码
 wire:
@@ -49,6 +50,22 @@ expva/db:
 
 # 发起 100 次请求，每次并发 50
 # hey -n 100 -c 50 http://localhost:9999/healthcheck
+
+# --go-grpc_out=
+protobuf:
+	@protoc \
+	  --go_out=. \
+	  --go-grpc_out=. \
+	  ./protos/*.proto
+	@python -m grpc_tools.protoc \
+		-I./protos \
+		--python_out=./analysis \
+		--grpc_python_out=./analysis \
+		--pyi_out=./analysis \
+		./protos/*.proto
+
+python/init:
+	@pip install -r python/requirements.txt
 
 
 # ==================================================================================== #

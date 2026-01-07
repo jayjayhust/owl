@@ -19,8 +19,9 @@ type Server struct {
 	Debug      bool
 	RTMPSecret string `comment:"rtmp 推流秘钥"`
 
-	Username string `comment:"登录用户名"`
-	Password string `comment:"登录密码"`
+	Username   string `comment:"登录用户名"`
+	Password   string `comment:"登录密码"`
+	DisabledAI bool   `comment:"是否禁用 ai 分析服务"`
 
 	HTTP ServerHTTP `comment:"对外提供的服务，建议由 nginx 代理"` // HTTP服务器
 }

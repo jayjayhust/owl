@@ -4,6 +4,7 @@ package ipc
 import (
 	"context"
 	"log/slog"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -19,7 +20,7 @@ type ChannelStorer interface {
 	Find(context.Context, *[]*Channel, orm.Pager, ...orm.QueryOption) (int64, error)
 	Get(context.Context, *Channel, ...orm.QueryOption) error
 	Add(context.Context, *Channel) error
-	Edit(context.Context, *Channel, func(*Channel), ...orm.QueryOption) error
+	Edit(context.Context, *Channel, func(*Channel) error, ...orm.QueryOption) error
 	Del(context.Context, *Channel, ...orm.QueryOption) error
 
 	BatchEdit(context.Context, string, any, ...orm.QueryOption) error // 批量更新一个字段
@@ -87,10 +88,11 @@ func (c *Core) AddChannel(ctx context.Context, in *AddChannelInput) (*Channel, e
 func (c *Core) EditChannel(ctx context.Context, in *EditChannelInput, id string) (*Channel, error) {
 	// TODO: 修改 onvif 的账号/密码 后需要重新连接设备
 	var out Channel
-	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) {
+	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) error {
 		if err := copier.Copy(b, in); err != nil {
 			slog.ErrorContext(ctx, "Copy", "err", err)
 		}
+		return nil
 	}, orm.Where("id=?", id)); err != nil {
 		return nil, reason.ErrDB.Withf(`Edit err[%s]`, err.Error())
 	}
@@ -104,4 +106,39 @@ func (c *Core) DelChannel(ctx context.Context, id string) (*Channel, error) {
 		return nil, reason.ErrDB.Withf(`Del err[%s]`, err.Error())
 	}
 	return &out, nil
+}
+
+func (c *Core) AddZone(ctx context.Context, in *AddZoneInput, channelID string) (*Zone, error) {
+	newZone := Zone{
+		Name:        in.Name,
+		Coordinates: in.Coordinates,
+		Color:       in.Color,
+		Labels:      in.Labels,
+	}
+
+	var out Channel
+	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) error {
+		if slices.ContainsFunc(b.Ext.Zones, func(z Zone) bool {
+			return z.Name == in.Name
+		}) {
+			return reason.ErrBadRequest.SetMsg("存在同名区域")
+		}
+
+		b.Ext.Zones = append(b.Ext.Zones, newZone)
+		return nil
+	}, orm.Where("id=?", channelID)); err != nil {
+		if reason.IsCustomError(err) {
+			return nil, err
+		}
+		return nil, reason.ErrDB.Withf(`Edit err[%s]`, err.Error())
+	}
+	return &newZone, nil
+}
+
+func (c *Core) GetZones(ctx context.Context, channelID string) ([]Zone, error) {
+	var out Channel
+	if err := c.store.Channel().Get(ctx, &out, orm.Where("id=?", channelID)); err != nil {
+		return nil, reason.ErrDB.Withf(`Get err[%s]`, err.Error())
+	}
+	return out.Ext.Zones, nil
 }

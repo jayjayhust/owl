@@ -47,8 +47,8 @@ func (d Channel) Add(ctx context.Context, model *ipc.Channel) error {
 }
 
 // Edit implements ipc.ChannelStorer.
-func (d Channel) Edit(ctx context.Context, model *ipc.Channel, changeFn func(*ipc.Channel), opts ...orm.QueryOption) error {
-	return orm.UpdateWithContext(ctx, d.db, model, changeFn, opts...)
+func (d Channel) Edit(ctx context.Context, model *ipc.Channel, changeFn func(*ipc.Channel) error, opts ...orm.QueryOption) error {
+	return orm.UpdateWithContext2(ctx, d.db, model, changeFn, opts...)
 }
 
 // Del implements ipc.ChannelStorer.

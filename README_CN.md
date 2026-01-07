@@ -116,6 +116,26 @@ proxy_set_header Upgrade $http_upgrade;
 
 proxy_set_header Connection "upgrade";
 
+> 如何使用其它数据库?
+
+在 configs/config.toml 配置文件中，修改 database.dsn
+
+[推荐] sqlite 应该为本地磁盘路径，建议默认  configs/data.db
+
+[推荐] postgres 参考格式 `postgres://postgres:123456@127.0.0.1:5432/gb28181?sslmode=disable`
+
+mysql 参考格式 `mysql://root:123456@127.0.0.1:5432/gb28181?sslmode=disable`
+
+postgres 和 mysql 的格式即:
+`<db_type>://<username>:<password>@<ip>:<port>/<db_name>?sslmode=disable`
+
+> 如何关闭 AI?
+
+ai 默认是开启状态，1 秒检测 5 帧
+
+可以在 `configs/config.toml` 中修改 `disabledAI = true` 关闭 ai 检测
+
+
 
 
 ## 文档

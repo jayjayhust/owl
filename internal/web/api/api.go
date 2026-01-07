@@ -105,6 +105,9 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 
 	// 反向代理流媒体数据
 	r.Any("/proxy/sms/*path", uc.proxySMS)
+
+	// 注册 AI 分析服务回调接口
+	registerAIWebhookAPI(r, uc.AIWebhookAPI)
 }
 
 type playOutput struct {

@@ -33,6 +33,7 @@ func Run(bc *conf.Bootstrap) {
 	defer clean()
 
 	go setupZLM(ctx, bc.ConfigDir)
+	go setupAIClient(ctx, "http://127.0.0.1:15123/ai", bc.Debug)
 
 	// 如果需要执行表迁移，递增此版本号和表更新说明
 	versionapi.DBVersion = "0.0.18"
@@ -118,6 +119,67 @@ func setupZLM(ctx context.Context, dir string) {
 				slog.Error("zlm 运行失败", "err", err)
 			} else {
 				slog.Info("MediaServer 退出，将重新启动")
+			}
+
+			// 等待后重启（不管是正常退出还是异常退出）
+			time.Sleep(2 * time.Second)
+		}
+	}
+}
+
+func findPythonPath() string {
+	candidates := []string{
+		"/opt/homebrew/Caskroom/miniconda/base/bin/python", // macOS Homebrew Miniconda
+		"/opt/homebrew/anaconda3/bin/python",               // macOS Homebrew Anaconda
+		"/usr/local/anaconda3/bin/python",                  // Linux Anaconda
+		"/usr/local/miniconda3/bin/python",                 // Linux Miniconda
+		"/root/miniconda3/bin/python",                      // Linux root Miniconda
+	}
+
+	for _, p := range candidates {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return "python"
+}
+
+func setupAIClient(ctx context.Context, callback string, debug bool) {
+	workDir := filepath.Join(system.Getwd(), "analysis")
+	if _, err := os.Stat(filepath.Join(workDir, "main.py")); err != nil && os.IsNotExist(err) {
+		slog.Info("main.py 文件不存在，跳过启动 ai", "path", filepath.Join(workDir, "main.py"))
+		return
+	}
+
+	pythonPath := findPythonPath()
+	slog.Info("使用 Python 路径", "path", pythonPath)
+
+	args := []string{"main.py"}
+	if callback != "" {
+		args = append(args, "--callback-url", callback)
+	}
+	if debug {
+		args = append(args, "--log-level", "DEBUG")
+	}
+
+	for range 100 {
+		select {
+		case <-ctx.Done():
+			slog.Info("收到退出信号，停止重启 ai")
+			return
+		default:
+			slog.Info("ai 启动中...")
+			cmd := exec.CommandContext(ctx, pythonPath, args...)
+			cmd.Dir = workDir
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			cmd.Env = os.Environ()
+
+			// 启动命令 - 正常情况下会阻塞在这里
+			if err := cmd.Run(); err != nil {
+				slog.Error("ai 运行失败", "err", err)
+			} else {
+				slog.Info("ai 退出，将重新启动")
 			}
 
 			// 等待后重启（不管是正常退出还是异常退出）

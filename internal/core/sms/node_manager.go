@@ -17,6 +17,8 @@ import (
 	"github.com/ixugo/goddd/pkg/web"
 )
 
+const KeepaliveInterval = 2 * 15 * time.Second
+
 type WarpMediaServer struct {
 	IsOnline      bool
 	LastUpdatedAt time.Time
@@ -71,7 +73,6 @@ func (n *NodeManager) tickCheck() {
 		case <-n.quit:
 			return
 		case <-ticker.C:
-			const KeepaliveInterval = 2 * 15 * time.Second
 			n.cacheServers.Range(func(_ string, ms *WarpMediaServer) bool {
 				if time.Since(ms.LastUpdatedAt) < KeepaliveInterval {
 					ms.IsOnline = true
@@ -232,6 +233,14 @@ func (n *NodeManager) Keepalive(serverID string) {
 		return
 	}
 	value.LastUpdatedAt = time.Now()
+}
+
+func (n *NodeManager) IsOnline(serverID string) bool {
+	value, ok := n.cacheServers.Load(serverID)
+	if !ok {
+		return false
+	}
+	return value.IsOnline
 }
 
 // findMediaServer Paginated search

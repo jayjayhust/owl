@@ -184,14 +184,6 @@ type GetServerConfigData struct {
 	SrtTimeoutSec                      string `json:"srt.timeoutSec"`
 }
 
-func NewString(s string) *string {
-	return &s
-}
-
-func NewBool(b bool) *bool {
-	return &b
-}
-
 // SetServerConfigRequest
 // https://github.com/zlmediakit/ZLMediaKit/wiki/MediaServer%E6%94%AF%E6%8C%81%E7%9A%84HTTP-HOOK-API
 type SetServerConfigRequest struct {

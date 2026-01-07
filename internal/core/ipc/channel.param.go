@@ -28,3 +28,11 @@ type AddChannelInput struct {
 	IsOnline bool      `json:"is_online"` // 是否在线
 	Ext      DeviceExt `json:"ext"`
 }
+
+type AddZoneInput struct {
+	Name        string    `json:"name"`        // 区域名称
+	Coordinates []float32 `json:"coordinates"` // 坐标
+	Color       string    `json:"color"`       // 颜色，支持 hex 颜色值，如 #FF0000
+	Labels      []string  `json:"labels"`      // 标签
+	ChannelID   string    `json:"-"`           // 通道 id
+}

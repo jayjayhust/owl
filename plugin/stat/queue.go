@@ -65,7 +65,7 @@ func (c *CircleQueue) Range() []PercentData {
 		idx = c.idx
 	}
 	data := make([]PercentData, 0, size)
-	for i := 0; i < size; i++ {
+	for range size {
 		data = append(data, c.array[idx])
 		idx = (idx + 1) % c.maxSize
 	}

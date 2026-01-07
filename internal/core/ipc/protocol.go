@@ -83,8 +83,9 @@ func (g Adapter) Edit(deviceID string, changeFn func(*Device)) error {
 
 func (g Adapter) EditPlayingByID(ctx context.Context, id string, playing bool) error {
 	var ch Channel
-	if err := g.store.Channel().Edit(ctx, &ch, func(c *Channel) {
+	if err := g.store.Channel().Edit(ctx, &ch, func(c *Channel) error {
 		c.IsPlaying = playing
+		return nil
 	}, orm.Where("id=?", id)); err != nil {
 		return err
 	}
@@ -93,8 +94,9 @@ func (g Adapter) EditPlayingByID(ctx context.Context, id string, playing bool) e
 
 func (g Adapter) EditPlaying(ctx context.Context, deviceID, channelID string, playing bool) error {
 	var ch Channel
-	if err := g.store.Channel().Edit(ctx, &ch, func(c *Channel) {
+	if err := g.store.Channel().Edit(ctx, &ch, func(c *Channel) error {
 		c.IsPlaying = playing
+		return nil
 	}, orm.Where("device_id = ? AND channel_id = ?", deviceID, channelID)); err != nil {
 		return err
 	}
@@ -145,10 +147,11 @@ func (g Adapter) SaveChannels(channels []*Channel) error {
 
 		if existing, ok := existingMap[channel.ChannelID]; ok {
 			// 通道已存在，更新信息
-			_ = g.store.Channel().Edit(ctx, existing, func(c *Channel) {
+			_ = g.store.Channel().Edit(ctx, existing, func(c *Channel) error {
 				c.Name = channel.Name
 				c.IsOnline = channel.IsOnline
 				c.Ext = channel.Ext
+				return nil
 			}, orm.Where("id=?", existing.ID))
 		} else {
 			// 通道不存在，新增

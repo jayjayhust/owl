@@ -113,6 +113,25 @@ proxy_set_header Upgrade $http_upgrade;
 
 proxy_set_header Connection "upgrade";
 
+> How to use other databases?
+
+In the `configs/config.toml` configuration file, modify `database.dsn`
+
+[Recommended] SQLite should be a local disk path, default is `configs/data.db`
+
+[Recommended] PostgreSQL format: `postgres://postgres:123456@127.0.0.1:5432/gb28181?sslmode=disable`
+
+MySQL format: `mysql://root:123456@127.0.0.1:5432/gb28181?sslmode=disable`
+
+PostgreSQL and MySQL format pattern:
+`<db_type>://<username>:<password>@<ip>:<port>/<db_name>?sslmode=disable`
+
+> How to disable AI?
+
+AI detection is enabled by default, detecting 5 frames per second.
+
+You can disable AI detection by setting `disabledAI = true` in `configs/config.toml`
+
 ## Documentation
 
 GoWVP [Online API Documentation](https://apifox.com/apidoc/shared-7b67c918-5f72-4f64-b71d-0593d7427b93)

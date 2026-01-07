@@ -7,13 +7,14 @@
 package app
 
 import (
+	"log/slog"
+	"net/http"
+
 	"github.com/gowvp/gb28181/internal/conf"
 	"github.com/gowvp/gb28181/internal/data"
 	"github.com/gowvp/gb28181/internal/web/api"
 	"github.com/gowvp/gb28181/pkg/gbs"
 	"github.com/ixugo/goddd/domain/version/versionapi"
-	"log/slog"
-	"net/http"
 )
 
 // Injectors from wire.go:
@@ -41,19 +42,21 @@ func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error)
 	proxyAPI := api.NewProxyAPI(proxyCore)
 	configAPI := api.NewConfigAPI(db, bc)
 	userAPI := api.NewUserAPI(bc)
+	aiWebhookAPI := api.NewAIWebhookAPI(bc)
 	usecase := &api.Usecase{
-		Conf:       bc,
-		DB:         db,
-		Version:    versionapiAPI,
-		SMSAPI:     smsAPI,
-		WebHookAPI: webHookAPI,
-		UniqueID:   uniqueidCore,
-		MediaAPI:   pushAPI,
-		GB28181API: ipcapi,
-		ProxyAPI:   proxyAPI,
-		ConfigAPI:  configAPI,
-		SipServer:  server,
-		UserAPI:    userAPI,
+		Conf:         bc,
+		DB:           db,
+		Version:      versionapiAPI,
+		SMSAPI:       smsAPI,
+		WebHookAPI:   webHookAPI,
+		UniqueID:     uniqueidCore,
+		MediaAPI:     pushAPI,
+		GB28181API:   ipcapi,
+		ProxyAPI:     proxyAPI,
+		ConfigAPI:    configAPI,
+		SipServer:    server,
+		UserAPI:      userAPI,
+		AIWebhookAPI: aiWebhookAPI,
 	}
 	handler := api.NewHTTPHandler(usecase)
 	return handler, func() {

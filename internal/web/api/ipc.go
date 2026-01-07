@@ -2,6 +2,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -21,6 +22,7 @@ import (
 	"github.com/gowvp/gb28181/internal/core/push"
 	"github.com/gowvp/gb28181/internal/core/sms"
 	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/gb28181/protos"
 	"github.com/ixugo/goddd/domain/uniqueid"
 	"github.com/ixugo/goddd/pkg/hook"
 	"github.com/ixugo/goddd/pkg/orm"
@@ -252,6 +254,9 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 		return nil, reason.ErrNotFound.SetMsg("不支持的播放通道")
 	}
 
+	if !a.uc.SMSAPI.smsCore.IsOnline(mediaServerID) {
+		return nil, reason.ErrNotFound.SetMsg("Oops! 流媒体服务离线或IP有误")
+	}
 	svr, err := a.uc.SMSAPI.smsCore.GetMediaServer(c.Request.Context(), mediaServerID)
 	if err != nil {
 		return nil, err
@@ -284,9 +289,9 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 
 	// 取一张快照
 	go func() {
+		rtsp := fmt.Sprintf("rtsp://%s:%d/%s", "127.0.0.1", svr.Ports.RTSP, stream) + "?" + session
 		for range 2 {
 			time.Sleep(3 * time.Second)
-			rtsp := fmt.Sprintf("rtsp://%s:%d/%s", "127.0.0.1", svr.Ports.RTSP, stream) + "?" + session
 
 			body, err := a.uc.SMSAPI.smsCore.GetSnapshot(svr, sms.GetSnapRequest{
 				GetSnapRequest: zlm.GetSnapRequest{
@@ -304,6 +309,33 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 				slog.ErrorContext(c.Request.Context(), "write cover", "err", err)
 			}
 			break
+		}
+		if a.uc.Conf.Server.DisabledAI || a.uc.AIWebhookAPI.ai == nil {
+			return
+		}
+
+		if _, ok := a.uc.AIWebhookAPI.aiTasks.LoadOrStore(channelID, struct{}{}); !ok {
+			resp, err := a.uc.AIWebhookAPI.ai.StartCamera(context.Background(), &protos.StartCameraRequest{
+				CameraId:       appStream,
+				CameraName:     appStream,
+				RtspUrl:        rtsp,
+				DetectFps:      5,
+				Labels:         []string{"person", "car", "cat", "dog"},
+				Threshold:      0.65,
+				RetryLimit:     10,
+				CallbackUrl:    fmt.Sprintf("http://127.0.0.1:%d/ai", a.uc.Conf.Server.HTTP.Port),
+				CallbackSecret: "Basic 1234567890",
+			})
+			if err != nil {
+				slog.Error("start camera", "err", err)
+				return
+			}
+			slog.Debug("start camera", "resp", resp,
+				"msg", resp.GetMessage(),
+				"source_width", resp.GetSourceWidth(),
+				"source_height", resp.GetSourceHeight(),
+				"source_fps", resp.GetSourceFps(),
+			)
 		}
 	}()
 	return &out, nil

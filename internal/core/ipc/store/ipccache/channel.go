@@ -40,7 +40,7 @@ func (c *Channel) Del(ctx context.Context, ch *ipc.Channel, opts ...orm.QueryOpt
 }
 
 // Edit implements ipc.ChannelStorer.
-func (c *Channel) Edit(ctx context.Context, ch *ipc.Channel, changeFn func(*ipc.Channel), opts ...orm.QueryOption) error {
+func (c *Channel) Edit(ctx context.Context, ch *ipc.Channel, changeFn func(*ipc.Channel) error, opts ...orm.QueryOption) error {
 	return c.Storer.Channel().Edit(ctx, ch, changeFn, opts...)
 }
 
