@@ -40,10 +40,17 @@ class LogPipe(threading.Thread):
 
 
 class FrameCapture:
-    def __init__(self, rtsp_url: str, output_queue: queue.Queue, detect_fps: int = 5):
+    def __init__(
+        self,
+        rtsp_url: str,
+        output_queue: queue.Queue,
+        detect_fps: int = 5,
+        retry_limit: int = 10,
+    ):
         self.rtsp_url = rtsp_url
         self.output_queue = output_queue
         self.target_fps = detect_fps
+        self.retry_limit = retry_limit
         self._stop_event = threading.Event()
         self._thread: Optional[threading.Thread] = None
         self._proccess: Optional[subprocess.Popen] = None
@@ -52,6 +59,11 @@ class FrameCapture:
         self.width = 0
         self.height = 0
         self.fps = 0.0
+
+        # 错误状态，供外部查询
+        self.error_count = 0
+        self.last_error = ""
+        self.is_failed = False
 
     def start(self):
         if self._thread is not None and self._thread.is_alive():
@@ -116,8 +128,18 @@ class FrameCapture:
         while not self._stop_event.is_set():
             if self.width == 0 or self.height == 0:
                 if not self._get_stream_info():
+                    self.error_count += 1
+                    if self.error_count >= self.retry_limit:
+                        self.is_failed = True
+                        self.last_error = (
+                            f"探测流信息失败，已重试 {self.error_count} 次"
+                        )
+                        slog.error(self.last_error)
+                        return
                     time.sleep(3)
                     continue
+            # 成功获取流信息后重置错误计数
+            self.error_count = 0
             if log_pipe:
                 log_pipe.close()
             log_pipe = LogPipe(f"ffmpeg.{self.rtsp_url}")
@@ -187,6 +209,7 @@ class FrameCapture:
 
                 except Exception as e:
                     slog.error(f"读取帧失败: {e}")
+                    self.last_error = str(e)
                     log_pipe.dump()
                     break
             self._terminate_process()
@@ -196,6 +219,14 @@ class FrameCapture:
 
             if self._stop_event.is_set():
                 break
+
+            # ffmpeg 进程异常退出也计入错误计数
+            self.error_count += 1
+            if self.error_count >= self.retry_limit:
+                self.is_failed = True
+                self.last_error = f"帧捕获失败，已重试 {self.error_count} 次"
+                slog.error(self.last_error)
+                return
             time.sleep(2)
 
     def _terminate_process(self):

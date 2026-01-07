@@ -310,7 +310,7 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 			}
 			break
 		}
-		if a.uc.Conf.Server.DisabledAI || a.uc.AIWebhookAPI.ai == nil {
+		if a.uc.Conf.Server.AI.Disabled || a.uc.AIWebhookAPI.ai == nil {
 			return
 		}
 

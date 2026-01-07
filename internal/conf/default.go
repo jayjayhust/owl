@@ -21,6 +21,10 @@ func DefaultConfig() Bootstrap {
 					AccessIps: []string{"::1", "127.0.0.1"},
 				},
 			},
+			AI: ServerAI{
+				Disabled:   false,
+				RetainDays: 10,
+			},
 		},
 		Data: Data{
 			Database: Database{

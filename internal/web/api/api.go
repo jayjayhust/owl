@@ -46,10 +46,12 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 		web.Metrics(),
 		web.Logger(web.IgnorePrefix(staticPrefix),
 			web.IgnoreMethod(http.MethodOptions),
+			web.IgnorePrefix("/events/image"),
 		),
 		web.LoggerWithBody(web.DefaultBodyLimit,
 			web.IgnoreBool(uc.Conf.Debug),
 			web.IgnoreMethod(http.MethodOptions),
+			web.IgnorePrefix("/events/image"),
 		),
 	)
 	go web.CountGoroutines(10*time.Minute, 20)
@@ -108,6 +110,8 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 
 	// 注册 AI 分析服务回调接口
 	registerAIWebhookAPI(r, uc.AIWebhookAPI)
+	// TODO: 待补充中间件
+	RegisterEvent(r, uc.EventAPI)
 }
 
 type playOutput struct {

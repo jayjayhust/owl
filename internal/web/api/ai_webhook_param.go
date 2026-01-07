@@ -1,5 +1,7 @@
 package api
 
+import "github.com/ixugo/goddd/pkg/orm"
+
 // AIKeepaliveInput 心跳回调请求体
 type AIKeepaliveInput struct {
 	Timestamp int64          `json:"timestamp"` // Unix 时间戳 (毫秒)
@@ -16,7 +18,7 @@ type AIStartedInput struct {
 // AIDetectionInput 检测事件回调请求体
 type AIDetectionInput struct {
 	CameraID       string        `json:"camera_id"`       // 摄像头 ID
-	Timestamp      int64         `json:"timestamp"`       // Unix 时间戳 (毫秒)
+	Timestamp      orm.Time      `json:"timestamp"`       // Unix 时间戳 (毫秒)
 	Detections     []AIDetection `json:"detections"`      // 检测结果列表
 	Snapshot       string        `json:"snapshot"`        // Base64 编码的快照 (JPEG)
 	SnapshotWidth  int           `json:"snapshot_width"`  // 快照宽度
@@ -25,10 +27,10 @@ type AIDetectionInput struct {
 
 // AIStoppedInput 任务停止回调请求体
 type AIStoppedInput struct {
-	CameraID  string `json:"camera_id"` // 摄像头 ID
-	Timestamp int64  `json:"timestamp"` // Unix 时间戳 (毫秒)
-	Reason    string `json:"reason"`    // 停止原因 (user_requested, error)
-	Message   string `json:"message"`   // 详细信息
+	CameraID  string   `json:"camera_id"` // 摄像头 ID
+	Timestamp orm.Time `json:"timestamp"` // Unix 时间戳 (毫秒)
+	Reason    string   `json:"reason"`    // 停止原因 (user_requested, error)
+	Message   string   `json:"message"`   // 详细信息
 }
 
 // AIDetection 检测对象

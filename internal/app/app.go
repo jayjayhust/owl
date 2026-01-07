@@ -33,10 +33,12 @@ func Run(bc *conf.Bootstrap) {
 	defer clean()
 
 	go setupZLM(ctx, bc.ConfigDir)
-	go setupAIClient(ctx, "http://127.0.0.1:15123/ai", bc.Debug)
+	if !bc.Server.AI.Disabled {
+		go setupAIClient(ctx, "http://127.0.0.1:15123/ai", bc.Debug)
+	}
 
 	// 如果需要执行表迁移，递增此版本号和表更新说明
-	versionapi.DBVersion = "0.0.18"
+	versionapi.DBVersion = "0.0.19"
 	versionapi.DBRemark = "onvif device support"
 
 	handler, cleanUp, err := wireApp(bc, log)
@@ -141,7 +143,7 @@ func findPythonPath() string {
 			return p
 		}
 	}
-	return "python"
+	return "python3"
 }
 
 func setupAIClient(ctx context.Context, callback string, debug bool) {

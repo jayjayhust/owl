@@ -1,16 +1,12 @@
+# ONNX Runtime - 替代 PyTorch，大幅减小镜像体积
+onnxruntime>=1.17.0
+
 # gRPC 框架
-grpcio==1.76.0
-grpcio-tools==1.76.0
+grpcio>=1.60.0
 
-# 图像处理
+# 图像处理 (headless 版本更小)
 opencv-python-headless>=4.8.0
-numpy>=2.3.5
+numpy>=1.24.0
 
-# YOLO 模型
-ultralytics>=8.0.0
-
-# 科学计算
-scipy>=1.16.3
-
-# HTTP 客户端 (用于回调)
+# HTTP 客户端
 requests>=2.31.0

@@ -1,13 +1,12 @@
 import os
 import signal
 
-# 解决 macOS 上 OpenMP 库冲突问题，必须在导入 torch/cv2 等库之前设置
+# 解决 macOS 上 OpenMP 库冲突问题，必须在导入 cv2 等库之前设置
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 import argparse
 import base64
 from concurrent import futures
-from concurrent.futures import thread
 import logging
 import queue
 import sys
@@ -17,7 +16,6 @@ from typing import Any
 import requests
 
 import grpc
-from torch.export.exported_program import PassType
 
 # 添加当前目录到 path 以支持直接运行
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -28,11 +26,9 @@ from frame_capture import FrameCapture
 import cv2
 
 # 导入生成的 proto 代码
-try:
-    import analysis_pb2
-    import analysis_pb2_grpc
-except ImportError:
-    pass
+# 这些模块必须存在才能启动 gRPC 服务
+import analysis_pb2
+import analysis_pb2_grpc
 
 
 slog = logging.getLogger("AI")
@@ -88,7 +84,10 @@ class CameraTask:
 
         self.frame_queue = queue.Queue(maxsize=1)
         self.capture = FrameCapture(
-            rtsp_url, self.frame_queue, config.get("detect_fps", 5)
+            rtsp_url,
+            self.frame_queue,
+            config.get("detect_fps", 5),
+            config.get("retry_limit", 10),
         )
 
     def start(self):
@@ -112,6 +111,16 @@ class CameraTask:
         retry_limit = int(self.config.get("retry_limit", 10))
 
         while not self._stop_event.is_set():
+            # 检查 FrameCapture 是否已达到重试上限
+            if self.capture.is_failed:
+                self.status = "error"
+                self.last_error = self.capture.last_error
+                self._send_stopped_callback("capture_failed", self.last_error)
+                slog.error(
+                    f"CameraTask {self.camera_id} 因帧捕获失败而停止: {self.last_error}"
+                )
+                break
+
             try:
                 try:
                     frame = self.frame_queue.get(timeout=2.0)
@@ -410,7 +419,7 @@ def send_started_callback():
             if resp.ok:
                 slog.info("启动通知发送成功")
                 return
-            slog.warning(f"启动通知返回非成功状态: {resp.status_code}")
+            slog.warning(f"启动通知返回非成功状态: {resp.status_code} {full_url}")
         except requests.exceptions.ConnectionError as e:
             slog.warning(f"发送启动通知失败 (连接错误): {e}")
         except Exception as e:
@@ -449,10 +458,6 @@ def send_keepalive_callback(stats: dict):
 
 
 def serve(port, model_path):
-    if "analysis_pb2_grpc" not in sys.modules:
-        slog.error("Proto 代码未加载，退出。")
-        return
-
     # 启动父进程监控线程，确保 Go 退出时 Python 也退出
     threading.Thread(target=_watch_parent_process, daemon=True).start()
 
@@ -478,7 +483,7 @@ def serve(port, model_path):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=50051)
-    parser.add_argument("--model", type=str, default="yolo11n.pt")
+    parser.add_argument("--model", type=str, default="yolo11n.onnx")
     parser.add_argument(
         "--callback-url",
         type=str,

@@ -10,7 +10,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/wire v0.7.0
 	github.com/gowvp/onvif v0.0.14
-	github.com/ixugo/goddd v1.5.1
+	github.com/ixugo/goddd v1.5.2
 	github.com/ixugo/netpulse v0.1.3
 	github.com/jinzhu/copier v0.4.0
 	github.com/pelletier/go-toml/v2 v2.2.4

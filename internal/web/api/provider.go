@@ -9,6 +9,7 @@ import (
 	"github.com/gowvp/gb28181/internal/adapter/onvifadapter"
 	"github.com/gowvp/gb28181/internal/adapter/rtspadapter"
 	"github.com/gowvp/gb28181/internal/conf"
+	"github.com/gowvp/gb28181/internal/core/event"
 	"github.com/gowvp/gb28181/internal/core/ipc"
 	"github.com/gowvp/gb28181/internal/core/ipc/store/ipccache"
 	"github.com/gowvp/gb28181/internal/core/ipc/store/ipcdb"
@@ -40,7 +41,8 @@ var (
 		NewProxyAPI, NewProxyCore,
 		NewConfigAPI,
 		NewUserAPI,
-		NewAIWebhookAPI,
+		NewAIWebhookAPIWithDeps,
+		NewEventCore, NewEventAPI,
 	)
 )
 
@@ -59,6 +61,8 @@ type Usecase struct {
 	SipServer    *gbs.Server
 	UserAPI      UserAPI
 	AIWebhookAPI AIWebhookAPI
+
+	EventAPI EventAPI
 }
 
 // NewHTTPHandler 生成Gin框架路由内容
@@ -111,4 +115,9 @@ func NewProtocols(adapter ipc.Adapter, sms sms.Core, proxyCore *proxy.Core, gbs 
 	protocols[ipc.TypeRTSP] = rtspadapter.NewAdapter(proxyCore, sms)
 	protocols[ipc.TypeGB28181] = gbadapter.NewAdapter(adapter, gbs, sms)
 	return protocols
+}
+
+// NewAIWebhookAPIWithDeps 创建带依赖的 AI Webhook API
+func NewAIWebhookAPIWithDeps(conf *conf.Bootstrap, eventCore event.Core, ipcCore ipc.Core) AIWebhookAPI {
+	return NewAIWebhookAPI(conf, eventCore, ipcCore)
 }
