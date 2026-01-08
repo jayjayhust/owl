@@ -1,7 +1,11 @@
 [English](./README.md) | **中文**
 
 <p align="center">
-    <img src="./docs/logo.png" alt="GoWVP Logo" width="550"/>
+
+|<img src="./docs/logo.png" alt="GoWVP Logo" width="550"/>|<img src="./docs/logo2.png" alt="GoWVP Logo" width="550"/>|
+|-|-|
+
+
 </p>
 
 <p align="center">
