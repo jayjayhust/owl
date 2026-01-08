@@ -208,12 +208,11 @@ docker/build/zlm: build/clean build/linux
 	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -f Dockerfile_zlm .
 
 docker/build/ai: build/clean build/linux
-	@docker build --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:beta -f Dockerfile_ai .
-
+	@docker build --push  --platform linux/amd64,linux/arm64 -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:beta -f Dockerfile_ai .
 
 # 发布融合镜像到镜像仓库
 docker/publish: build/clean build/linux
-	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64  -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -t $(IMAGE_NAME) -f Dockerfile_zlm .
+	@docker build --force-rm=true --push --platform linux/amd64,linux/arm64  -t registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest -t $(IMAGE_NAME) -f Dockerfile_ai .
 
 # 构建 gowvp 独立镜像
 docker/build/gowvp: build/clean build/linux

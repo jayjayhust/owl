@@ -1,6 +1,6 @@
 module github.com/gowvp/owl
 
-go 1.26
+go 1.25.4
 
 require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
