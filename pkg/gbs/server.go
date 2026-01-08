@@ -3,6 +3,7 @@ package gbs
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/url"
@@ -11,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gowvp/owl/internal/conf"
-	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/gbs/m"
@@ -87,7 +87,7 @@ func NewServer(cfg *conf.Bootstrap, store ipc.Adapter, sc sms.Core) (*Server, fu
 	return &c, c.Close
 }
 
-// startTickerCheck 定时检查离线
+// startTickerCheck 定时检查离线，通过心跳超时判断设备是否离线
 func (s *Server) startTickerCheck() {
 	conc.Timer(context.Background(), 60*time.Second, time.Second, func() {
 		now := time.Now()
@@ -95,19 +95,51 @@ func (s *Server) startTickerCheck() {
 			if !dev.IsOnline {
 				return true
 			}
-			if !bz.IsGB28181(key) {
+			if len(key) < 18 {
 				return true
 			}
-			timeout := time.Duration(dev.keepaliveTimeout) * time.Duration(dev.keepaliveInterval) * time.Second
-			if timeout <= 0 {
-				timeout = 3 * 60 * time.Second
+
+			// 计算超时时间：心跳间隔 * 超时次数
+			// 默认心跳间隔 60s，超时次数 3 次，即 3 分钟无心跳判定离线
+			interval := dev.keepaliveInterval
+			if interval == 0 {
+				interval = 60
+			}
+			timeoutCount := dev.keepaliveTimeout
+			if timeoutCount == 0 {
+				timeoutCount = 3
+			}
+			timeout := time.Duration(interval) * time.Duration(timeoutCount) * time.Second
+
+			// 跳过未收到过心跳的设备（LastKeepaliveAt 为零值），这类设备依赖注册超时处理
+			if dev.LastKeepaliveAt.IsZero() {
+				// 如果注册时间也超过了超时时间，则判定离线
+				if !dev.LastRegisterAt.IsZero() && now.Sub(dev.LastRegisterAt) >= timeout {
+					if err := s.gb.logout(key, func(d *ipc.Device) error {
+						d.IsOnline = false
+						return nil
+					}); err != nil {
+						slog.Error("logout device failed", "device_id", key, "err", err)
+					}
+				}
+				return true
 			}
 
+			// 心跳超时或连接丢失，判定设备离线
 			if sub := now.Sub(dev.LastKeepaliveAt); sub >= timeout || dev.conn == nil {
-				s.gb.logout(key, func(d *ipc.Device) error {
+				slog.Info("device offline detected",
+					"device_id", key,
+					"last_keepalive", dev.LastKeepaliveAt,
+					"timeout", timeout,
+					"elapsed", sub,
+					"conn_nil", dev.conn == nil,
+				)
+				if err := s.gb.logout(key, func(d *ipc.Device) error {
 					d.IsOnline = false
 					return nil
-				})
+				}); err != nil {
+					slog.Error("logout device failed", "device_id", key, "err", err)
+				}
 			}
 			return true
 		})

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"expvar"
 	"fmt"
 	"log/slog"
@@ -110,6 +111,8 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 
 	// 注册 AI 分析服务回调接口
 	registerAIWebhookAPI(r, uc.AIWebhookAPI)
+	// 启动 AI 任务同步协程，每 5 分钟检测一次数据库与内存状态差异
+	uc.AIWebhookAPI.StartAISyncLoop(context.Background(), uc.SMSAPI.smsCore)
 	// TODO: 待补充中间件
 	RegisterEvent(r, uc.EventAPI)
 }

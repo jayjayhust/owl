@@ -29,8 +29,10 @@ func NewEventCore(db *gorm.DB, conf *conf.Bootstrap) event.Core {
 	core := event.NewCore(store)
 
 	// 启动定时清理协程
-	days := max(conf.Server.AI.RetainDays, 1)
-
+	days := conf.Server.AI.RetainDays
+	if days <= 0 {
+		days = 7
+	}
 	go core.StartCleanupWorker(days)
 
 	return core

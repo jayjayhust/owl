@@ -23,7 +23,7 @@ func DefaultConfig() Bootstrap {
 			},
 			AI: ServerAI{
 				Disabled:   false,
-				RetainDays: 10,
+				RetainDays: 7,
 			},
 		},
 		Data: Data{

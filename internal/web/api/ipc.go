@@ -22,7 +22,6 @@ import (
 	"github.com/gowvp/owl/internal/core/push"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/zlm"
-	"github.com/gowvp/owl/protos"
 	"github.com/ixugo/goddd/domain/uniqueid"
 	"github.com/ixugo/goddd/pkg/hook"
 	"github.com/ixugo/goddd/pkg/orm"
@@ -107,6 +106,8 @@ func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
 		group.GET("/:id/snapshot", api.getSnapshot)                 // 获取图像（所有协议）
 		group.POST("/:id/zones", web.WrapH(api.addZone))            // 添加区域（所有协议）
 		group.GET("/:id/zones", web.WrapH(api.getZones))            // 获取区域（所有协议）
+		group.POST("/:id/ai/enable", web.WrapH(api.enableAI))       // 启用 AI 检测
+		group.POST("/:id/ai/disable", web.WrapH(api.disableAI))     // 禁用 AI 检测
 	}
 }
 
@@ -310,33 +311,33 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 			}
 			break
 		}
-		if a.uc.Conf.Server.AI.Disabled || a.uc.AIWebhookAPI.ai == nil {
-			return
-		}
+		// if a.uc.Conf.Server.AI.Disabled || a.uc.AIWebhookAPI.ai == nil {
+		// 	return
+		// }
 
-		if _, ok := a.uc.AIWebhookAPI.aiTasks.LoadOrStore(channelID, struct{}{}); !ok {
-			resp, err := a.uc.AIWebhookAPI.ai.StartCamera(context.Background(), &protos.StartCameraRequest{
-				CameraId:       appStream,
-				CameraName:     appStream,
-				RtspUrl:        rtsp,
-				DetectFps:      5,
-				Labels:         []string{"person", "car", "cat", "dog"},
-				Threshold:      0.65,
-				RetryLimit:     10,
-				CallbackUrl:    fmt.Sprintf("http://127.0.0.1:%d/ai", a.uc.Conf.Server.HTTP.Port),
-				CallbackSecret: "Basic 1234567890",
-			})
-			if err != nil {
-				slog.Error("start camera", "err", err)
-				return
-			}
-			slog.Debug("start camera", "resp", resp,
-				"msg", resp.GetMessage(),
-				"source_width", resp.GetSourceWidth(),
-				"source_height", resp.GetSourceHeight(),
-				"source_fps", resp.GetSourceFps(),
-			)
-		}
+		// if _, ok := a.uc.AIWebhookAPI.aiTasks.LoadOrStore(channelID, struct{}{}); !ok {
+		// 	resp, err := a.uc.AIWebhookAPI.ai.StartCamera(context.Background(), &protos.StartCameraRequest{
+		// 		CameraId:       appStream,
+		// 		CameraName:     appStream,
+		// 		RtspUrl:        rtsp,
+		// 		DetectFps:      5,
+		// 		Labels:         []string{"person", "car", "cat", "dog"},
+		// 		Threshold:      0.65,
+		// 		RetryLimit:     10,
+		// 		CallbackUrl:    fmt.Sprintf("http://127.0.0.1:%d/ai", a.uc.Conf.Server.HTTP.Port),
+		// 		CallbackSecret: "Basic 1234567890",
+		// 	})
+		// 	if err != nil {
+		// 		slog.Error("start camera", "err", err)
+		// 		return
+		// 	}
+		// 	slog.Debug("start camera", "resp", resp,
+		// 		"msg", resp.GetMessage(),
+		// 		"source_width", resp.GetSourceWidth(),
+		// 		"source_height", resp.GetSourceHeight(),
+		// 		"source_fps", resp.GetSourceFps(),
+		// 	)
+		// }
 	}()
 	return &out, nil
 }
@@ -459,4 +460,116 @@ type IOWriter struct {
 
 func (w IOWriter) Write(b []byte) (int, error) {
 	return w.fn(b)
+}
+
+var (
+	ErrAIGlobalDisabled    = reason.NewError("ErrAIGlobalDisabled", "AI 功能已在全局配置中禁用")
+	ErrAIServiceNotReady   = reason.NewError("ErrAIServiceNotReady", "AI 服务未初始化或连接失败")
+	ErrChannelNotSupported = reason.NewError("ErrChannelNotSupported", "不支持的通道类型")
+)
+
+// enableAI 启用指定通道的 AI 检测功能，需要先确保全局 AI 服务已启用且连接正常
+func (a IPCAPI) enableAI(c *gin.Context, _ *struct{}) (gin.H, error) {
+	channelID := c.Param("id")
+	ctx := c.Request.Context()
+
+	// 检查全局 AI 配置
+	if a.uc.Conf.Server.AI.Disabled {
+		return nil, ErrAIGlobalDisabled
+	}
+	if a.uc.AIWebhookAPI.ai == nil {
+		return nil, ErrAIServiceNotReady
+	}
+
+	// 更新数据库中的 AI 启用状态
+	channel, err := a.ipc.SetAIEnabled(ctx, channelID, true)
+	if err != nil {
+		return nil, err
+	}
+
+	// 构建 RTSP 地址
+	rtspURL, err := a.buildRTSPURL(ctx, channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// 启动 AI 检测任务
+	resp, err := a.uc.AIWebhookAPI.StartAIDetection(ctx, channel, rtspURL)
+	if err != nil {
+		slog.ErrorContext(ctx, "start camera AI", "err", err)
+		return nil, reason.ErrUsedLogic.SetMsg("启动 AI 检测失败: " + err.Error())
+	}
+
+	return gin.H{
+		"enabled":       true,
+		"message":       resp.GetMessage(),
+		"source_width":  resp.GetSourceWidth(),
+		"source_height": resp.GetSourceHeight(),
+		"source_fps":    resp.GetSourceFps(),
+	}, nil
+}
+
+// disableAI 禁用指定通道的 AI 检测功能，会同时停止正在运行的检测任务
+func (a IPCAPI) disableAI(c *gin.Context, _ *struct{}) (gin.H, error) {
+	channelID := c.Param("id")
+	ctx := c.Request.Context()
+
+	// 检查全局 AI 配置
+	if a.uc.Conf.Server.AI.Disabled {
+		return nil, ErrAIGlobalDisabled
+	}
+	if a.uc.AIWebhookAPI.ai == nil {
+		return nil, ErrAIServiceNotReady
+	}
+
+	// 更新数据库中的 AI 启用状态
+	if _, err := a.ipc.SetAIEnabled(ctx, channelID, false); err != nil {
+		return nil, err
+	}
+
+	// 停止 AI 检测任务
+	if err := a.uc.AIWebhookAPI.StopAIDetection(ctx, channelID); err != nil {
+		slog.ErrorContext(ctx, "stop camera AI", "err", err)
+	}
+
+	return gin.H{
+		"enabled": false,
+		"message": "AI 检测已停止",
+	}, nil
+}
+
+// buildRTSPURL 根据通道类型构建对应的 RTSP 播放地址
+func (a IPCAPI) buildRTSPURL(ctx context.Context, channelID string) (string, error) {
+	svr, err := a.uc.SMSAPI.smsCore.GetMediaServer(ctx, sms.DefaultMediaServerID)
+	if err != nil {
+		return "", err
+	}
+
+	var app, stream string
+
+	if bz.IsGB28181(channelID) {
+		app = "rtp"
+		stream = channelID
+	} else if bz.IsOnvif(channelID) {
+		app = "live"
+		stream = channelID
+	} else if bz.IsRTSP(channelID) {
+		proxy, err := a.uc.ProxyAPI.proxyCore.GetStreamProxy(ctx, channelID)
+		if err != nil {
+			return "", err
+		}
+		app = "live"
+		stream = proxy.Stream
+	} else if bz.IsRTMP(channelID) {
+		pu, err := a.uc.MediaAPI.pushCore.GetStreamPush(ctx, channelID)
+		if err != nil {
+			return "", err
+		}
+		app = pu.App
+		stream = pu.Stream
+	} else {
+		return "", ErrChannelNotSupported
+	}
+
+	return fmt.Sprintf("rtsp://%s:%d/%s/%s", "127.0.0.1", svr.Ports.RTSP, app, stream), nil
 }

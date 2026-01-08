@@ -19,6 +19,7 @@ class LogPipe(threading.Thread):
         self.deque: Deque[str] = deque(maxlen=100)
         self.fd_read, self.fd_write = os.pipe()
         self.pipe_reader = os.fdopen(self.fd_read)
+        self._closed = False
         self.start()
 
     def fileno(self):
@@ -27,16 +28,34 @@ class LogPipe(threading.Thread):
     def run(self):
         # 使用 iter() 包装 self.pipe_reader.readline 方法和空字符串""作为哨兵，使其不断读取管道内容。
         # iter(self.pipe_reader.readline, "") 会不断调用 readline()，直到返回空字符串（代表 EOF），循环终止。
-        for line in iter(self.pipe_reader.readline, ""):
-            self.deque.append(line)
-        self.pipe_reader.close()
+        try:
+            for line in iter(self.pipe_reader.readline, ""):
+                self.deque.append(line)
+        except (OSError, ValueError):
+            # 管道已关闭，忽略错误
+            pass
+        finally:
+            try:
+                if not self._closed:
+                    self.pipe_reader.close()
+            except (OSError, ValueError):
+                pass
 
     def dump(self):
         while len(self.deque) > 0:
             self.logger.error(self.deque.popleft())
 
     def close(self):
-        os.close(self.fd_read)
+        # 先关闭写端，让读端线程收到 EOF 并退出
+        if self._closed:
+            return
+        self._closed = True
+        try:
+            os.close(self.fd_write)
+        except OSError:
+            pass
+        # 等待读线程结束
+        self.join(timeout=1)
 
 
 class FrameCapture:

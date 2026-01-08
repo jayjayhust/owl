@@ -182,7 +182,7 @@ func (w WebHookAPI) onStreamNotFound(c *gin.Context, in *onStreamNotFoundInput) 
 	protocol, ok := w.protocols[r]
 	if ok {
 		if err := protocol.OnStreamNotFound(c.Request.Context(), app, stream); err != nil {
-			slog.ErrorContext(c.Request.Context(), "webhook onStreamNotFound", "err", err)
+			slog.InfoContext(c.Request.Context(), "webhook onStreamNotFound", "err", err)
 		}
 	}
 

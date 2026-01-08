@@ -142,3 +142,15 @@ func (c *Core) GetZones(ctx context.Context, channelID string) ([]Zone, error) {
 	}
 	return out.Ext.Zones, nil
 }
+
+// SetAIEnabled 设置通道的 AI 检测开关状态，同时返回更新后的完整通道信息供调用方使用
+func (c *Core) SetAIEnabled(ctx context.Context, channelID string, enabled bool) (*Channel, error) {
+	var out Channel
+	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) error {
+		b.Ext.EnabledAI = enabled
+		return nil
+	}, orm.Where("id=?", channelID)); err != nil {
+		return nil, reason.ErrDB.Withf(`Edit err[%s]`, err.Error())
+	}
+	return &out, nil
+}

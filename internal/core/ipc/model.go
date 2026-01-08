@@ -39,6 +39,7 @@ type DeviceExt struct {
 	Name         string `json:"name"`         // 设备名
 	GBVersion    string `json:"gb_version"`   // GB版本
 	Zones        []Zone `json:"zones"`        // 区域
+	EnabledAI    bool   `json:"enabled_ai"`   // 是否启用 AI
 }
 
 // Scan implements orm.Scaner.
