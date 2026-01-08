@@ -1,6 +1,6 @@
 package sms
 
-import "github.com/gowvp/gb28181/pkg/zlm"
+import "github.com/gowvp/owl/pkg/zlm"
 
 type AddStreamProxyRequest struct {
 	App     string `json:"app"`      // 添加的流的应用名，例如 live

@@ -8,7 +8,7 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/gowvp/gb28181/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
+    <a href="https://github.com/gowvp/owl/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
 </p>
 
 # Out-of-the-Box Video Surveillance Platform

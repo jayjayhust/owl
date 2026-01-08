@@ -3,7 +3,7 @@ package sms
 import (
 	"context"
 
-	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/owl/pkg/zlm"
 )
 
 const (

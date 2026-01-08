@@ -9,12 +9,12 @@
 </p>
 
 <p align="center">
-    <a href="https://github.com/gowvp/gb28181/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
+    <a href="https://github.com/gowvp/owl/releases"><img src="https://img.shields.io/github/v/release/ixugo/goddd?include_prereleases" alt="Version"/></a>
 </p>
 
-# 开箱即用的视频监控平台
+# GB28181 视频监控平台 开箱即用
 
-go wvp 是 Go 语言实现的开源 GB28181 解决方案，基于 GB28181-2022 标准实现的网络视频平台，同时支持 2016/2011 版本，支持 ONVIF/RTMP/RTSP 等协议。
+基于 GB28181-2022 标准实现的网络视频平台，同时支持 2016/2011 版本，支持 ONVIF/RTMP/RTSP 等协议，支持 yolo 检测告警。
 
 ## 在线演示平台
 

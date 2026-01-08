@@ -2,7 +2,7 @@
 package proxydb
 
 import (
-	"github.com/gowvp/gb28181/internal/core/proxy"
+	"github.com/gowvp/owl/internal/core/proxy"
 	"gorm.io/gorm"
 )
 

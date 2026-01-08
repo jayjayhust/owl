@@ -8,11 +8,11 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/internal/core/sms"
-	"github.com/gowvp/gb28181/pkg/gbs/m"
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
-	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/sms"
+	"github.com/gowvp/owl/pkg/gbs/m"
+	"github.com/gowvp/owl/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/zlm"
 	sdp "github.com/panjjo/gosdp"
 )
 
@@ -85,7 +85,7 @@ func (g *GB28181API) Play(in *PlayInput) error {
 	if ok {
 		log.Debug("PLAY 已存在流")
 		// TODO: 临时解决方案，每次播放，先停止再播放
-		// https://github.com/gowvp/gb28181/issues/16
+		// https://github.com/gowvp/owl/issues/16
 		if err := g.stopPlay(ch, &StopPlayInput{
 			Channel: in.Channel,
 		}); err != nil {

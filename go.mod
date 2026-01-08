@@ -1,4 +1,4 @@
-module github.com/gowvp/gb28181
+module github.com/gowvp/owl
 
 go 1.26
 

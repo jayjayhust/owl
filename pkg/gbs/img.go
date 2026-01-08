@@ -3,7 +3,7 @@ package gbs
 import (
 	"log/slog"
 
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 func (g *GB28181API) QuerySnapshot(deviceID, channelID string) error {

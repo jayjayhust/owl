@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 const (

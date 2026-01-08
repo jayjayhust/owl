@@ -7,9 +7,9 @@ import (
 	"net/http"
 
 	"github.com/google/wire"
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/internal/data"
-	"github.com/gowvp/gb28181/internal/web/api"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/internal/data"
+	"github.com/gowvp/owl/internal/web/api"
 )
 
 func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error) {

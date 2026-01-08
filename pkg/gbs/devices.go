@@ -8,9 +8,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/pkg/gbs/m"
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/pkg/gbs/m"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 	"github.com/ixugo/goddd/pkg/conc"
 )
 

@@ -4,7 +4,7 @@ package smsdb
 import (
 	"context"
 
-	"github.com/gowvp/gb28181/internal/core/sms"
+	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/ixugo/goddd/pkg/orm"
 	"gorm.io/gorm"
 )

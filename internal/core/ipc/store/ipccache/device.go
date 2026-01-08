@@ -4,8 +4,8 @@ import (
 	"context"
 	"log/slog"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/pkg/gbs"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/pkg/orm"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"

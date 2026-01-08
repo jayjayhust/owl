@@ -3,8 +3,8 @@ package gbs
 import (
 	"encoding/hex"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 // QueryDeviceInfo 设备信息查询请求

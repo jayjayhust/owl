@@ -7,10 +7,10 @@
 package app
 
 import (
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/internal/data"
-	"github.com/gowvp/gb28181/internal/web/api"
-	"github.com/gowvp/gb28181/pkg/gbs"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/internal/data"
+	"github.com/gowvp/owl/internal/web/api"
+	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/domain/version/versionapi"
 	"log/slog"
 	"net/http"

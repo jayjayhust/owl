@@ -5,7 +5,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gowvp/gb28181/internal/core/event"
+	"github.com/gowvp/owl/internal/core/event"
 	"github.com/ixugo/goddd/pkg/orm"
 	"gorm.io/gorm"
 )

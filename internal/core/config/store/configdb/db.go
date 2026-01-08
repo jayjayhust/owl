@@ -2,7 +2,7 @@
 package configdb
 
 import (
-	"github.com/gowvp/gb28181/internal/core/config"
+	"github.com/gowvp/owl/internal/core/config"
 	"gorm.io/gorm"
 )
 

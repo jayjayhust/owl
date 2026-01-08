@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gowvp/gb28181/pkg/lalmax"
-	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/owl/pkg/lalmax"
+	"github.com/gowvp/owl/pkg/zlm"
 )
 
 const (

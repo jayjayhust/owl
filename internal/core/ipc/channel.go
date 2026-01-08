@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gowvp/gb28181/internal/core/bz"
+	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"
 	"github.com/jinzhu/copier"

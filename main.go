@@ -8,8 +8,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/app"
-	"github.com/gowvp/gb28181/internal/conf"
+	"github.com/gowvp/owl/internal/app"
+	"github.com/gowvp/owl/internal/conf"
 	"github.com/ixugo/goddd/pkg/system"
 )
 

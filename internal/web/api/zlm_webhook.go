@@ -5,12 +5,12 @@ import (
 	"net/url"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/internal/core/bz"
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/internal/core/push"
-	"github.com/gowvp/gb28181/internal/core/sms"
-	"github.com/gowvp/gb28181/pkg/gbs"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/internal/core/bz"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/push"
+	"github.com/gowvp/owl/internal/core/sms"
+	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/pkg/web"
 )
 

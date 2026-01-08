@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"math"
 
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 // 配置参数类型常量定义

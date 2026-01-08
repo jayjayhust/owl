@@ -2,7 +2,7 @@
 package eventcache
 
 import (
-	"github.com/gowvp/gb28181/internal/core/event"
+	"github.com/gowvp/owl/internal/core/event"
 	"github.com/ixugo/goddd/pkg/conc"
 )
 

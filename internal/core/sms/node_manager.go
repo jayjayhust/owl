@@ -9,8 +9,8 @@ import (
 	"regexp"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/pkg/zlm"
 	"github.com/ixugo/goddd/pkg/conc"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"

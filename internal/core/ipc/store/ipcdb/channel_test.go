@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/ixugo/goddd/pkg/orm"
 )
 

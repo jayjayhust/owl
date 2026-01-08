@@ -2,7 +2,7 @@
 package eventdb
 
 import (
-	"github.com/gowvp/gb28181/internal/core/event"
+	"github.com/gowvp/owl/internal/core/event"
 	"gorm.io/gorm"
 )
 

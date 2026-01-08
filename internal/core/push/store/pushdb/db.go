@@ -2,7 +2,7 @@
 package pushdb
 
 import (
-	"github.com/gowvp/gb28181/internal/core/push"
+	"github.com/gowvp/owl/internal/core/push"
 	"gorm.io/gorm"
 )
 

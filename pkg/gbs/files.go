@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gowvp/gb28181/pkg/gbs/m"
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/gbs/m"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 type apiRecordList struct {

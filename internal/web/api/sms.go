@@ -3,9 +3,9 @@ package api
 
 import (
 	"github.com/gin-gonic/gin"
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/internal/core/sms"
-	"github.com/gowvp/gb28181/internal/core/sms/store/smsdb"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/internal/core/sms"
+	"github.com/gowvp/owl/internal/core/sms/store/smsdb"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"
 	"github.com/ixugo/goddd/pkg/web"

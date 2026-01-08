@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/internal/core/sms"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/ixugo/goddd/pkg/orm"
 )
 

@@ -2,7 +2,7 @@
 package ipcdb
 
 import (
-	"github.com/gowvp/gb28181/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/ipc"
 	"gorm.io/gorm"
 )
 

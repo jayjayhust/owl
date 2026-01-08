@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gowvp/gb28181/plugin/stat"
+	"github.com/gowvp/owl/plugin/stat"
 	"github.com/ixugo/goddd/pkg/web"
 )
 

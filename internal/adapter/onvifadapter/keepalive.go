@@ -5,9 +5,9 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
 	devicemodel "github.com/gowvp/onvif/device"
 	sdkdevice "github.com/gowvp/onvif/sdk/device"
+	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/ixugo/goddd/pkg/conc"
 	"github.com/ixugo/goddd/pkg/orm"
 )

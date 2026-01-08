@@ -1,7 +1,7 @@
 package gbs
 
 import (
-	"github.com/gowvp/gb28181/pkg/gbs/sip"
+	"github.com/gowvp/owl/pkg/gbs/sip"
 )
 
 func (g GB28181API) handlerMessage(ctx *sip.Context) {

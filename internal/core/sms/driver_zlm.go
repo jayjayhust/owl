@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/gowvp/gb28181/pkg/zlm"
+	"github.com/gowvp/owl/pkg/zlm"
 )
 
 var _ Driver = (*ZLMDriver)(nil)

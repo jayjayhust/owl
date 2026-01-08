@@ -7,9 +7,9 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
-	"github.com/gowvp/gb28181/internal/conf"
-	"github.com/gowvp/gb28181/internal/core/event"
-	"github.com/gowvp/gb28181/internal/core/event/store/eventdb"
+	"github.com/gowvp/owl/internal/conf"
+	"github.com/gowvp/owl/internal/core/event"
+	"github.com/gowvp/owl/internal/core/event/store/eventdb"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"
 	"github.com/ixugo/goddd/pkg/system"

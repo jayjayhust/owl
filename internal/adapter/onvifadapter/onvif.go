@@ -10,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/internal/core/sms"
 	"github.com/gowvp/onvif"
 	devicemodel "github.com/gowvp/onvif/device"
 	m "github.com/gowvp/onvif/media"
 	sdkdevice "github.com/gowvp/onvif/sdk/device"
 	sdkmedia "github.com/gowvp/onvif/sdk/media"
 	xsdonvif "github.com/gowvp/onvif/xsd/onvif"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/ixugo/goddd/pkg/conc"
 	"github.com/ixugo/goddd/pkg/orm"
 )

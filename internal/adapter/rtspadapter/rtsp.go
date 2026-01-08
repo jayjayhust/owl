@@ -3,9 +3,9 @@ package rtspadapter
 import (
 	"context"
 
-	"github.com/gowvp/gb28181/internal/core/ipc"
-	"github.com/gowvp/gb28181/internal/core/proxy"
-	"github.com/gowvp/gb28181/internal/core/sms"
+	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/proxy"
+	"github.com/gowvp/owl/internal/core/sms"
 )
 
 var _ ipc.Protocoler = (*Adapter)(nil)

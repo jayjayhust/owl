@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gowvp/gb28181/internal/conf"
+	"github.com/gowvp/owl/internal/conf"
 	"github.com/ixugo/goddd/domain/version/versionapi"
 	"github.com/ixugo/goddd/pkg/logger"
 	"github.com/ixugo/goddd/pkg/server"

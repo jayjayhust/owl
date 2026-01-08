@@ -6,7 +6,7 @@ import (
 
 	"github.com/glebarez/sqlite"
 	"github.com/google/wire"
-	"github.com/gowvp/gb28181/internal/conf"
+	"github.com/gowvp/owl/internal/conf"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/system"
 	"gorm.io/driver/mysql"
