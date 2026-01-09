@@ -43,3 +43,4 @@ cover/
 __pycache__/
 *.pt
 *.onnx
+*.remember/

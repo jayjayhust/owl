@@ -3,7 +3,7 @@ services:
     # 如果拉不到 docker hub 镜像，也可以尝试
     # registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest
     image: gospace/gowvp:latest
-    restart: unless-stopped
+    restart: always
     # linux 解开下行注释，并将 ports 全部注释
     # network_mode: host
     ports:

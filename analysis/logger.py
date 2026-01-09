@@ -59,7 +59,7 @@ def setup_logging(level_str: str = "INFO", retention_days: int = 3):
     )
 
     # 设置后缀格式，例如 app.log.2023-12-31
-    file_handler.suffix = "%Y-%m-%d"
+    file_handler.suffix = "%Y-%m-%d.log"
     file_handler.setFormatter(formatter)
     root_logger.addHandler(file_handler)
 
