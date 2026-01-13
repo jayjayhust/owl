@@ -177,11 +177,13 @@ build/linux:
 	$(eval GOOS := linux)
 	$(eval dir := $(BUILD_DIR_ROOT)/$(GOOS)_$(GOARCH))
 	@make build/local GOOS=$(GOOS) GOARCH=$(GOARCH)
+	@upx $(dir)/bin
 
 	$(eval GOARCH := arm64)
 	$(eval GOOS := linux)
 	$(eval dir := $(BUILD_DIR_ROOT)/$(GOOS)_$(GOARCH))
 	@make build/local GOOS=$(GOOS) GOARCH=$(GOARCH)
+	@upx $(dir)/bin
 
 ## build/windows: 构建 windows 应用
 .PHONY: build/windows
