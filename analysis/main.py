@@ -25,6 +25,14 @@ from detect import MotionDetector, ObjectDetector
 from frame_capture import FrameCapture
 import cv2
 
+# 模型文件搜索候选路径（按优先级排序）
+MODEL_SEARCH_PATHS = [
+    ("../configs/owl.tflite", "tflite"),
+    ("../configs/owl.onnx", "onnx"),
+    ("./owl.tflite", "tflite"),
+    ("./owl.onnx", "onnx"),
+]
+
 # 导入生成的 proto 代码
 # 这些模块必须存在才能启动 gRPC 服务
 import analysis_pb2
@@ -480,10 +488,31 @@ def serve(port, model_path):
         server.stop(0)
 
 
+def discover_model(model_arg: str) -> str:
+    """
+    自动发现可用模型文件
+    优先级：../configs/owl.tflite > ../configs/owl.onnx > ./owl.tflite > ./owl.onnx > 命令行参数
+    """
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+
+    for rel_path, _ in MODEL_SEARCH_PATHS:
+        full_path = os.path.normpath(os.path.join(script_dir, rel_path))
+        if os.path.exists(full_path):
+            slog.info(f"发现模型文件: {full_path}")
+            return full_path
+
+    # 回退到命令行参数指定的模型
+    if os.path.isabs(model_arg):
+        return model_arg
+
+    # 相对路径基于脚本目录解析
+    return os.path.normpath(os.path.join(script_dir, model_arg))
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=50051)
-    parser.add_argument("--model", type=str, default="yolo11n.onnx")
+    parser.add_argument("--model", type=str, default="owl.onnx")
     parser.add_argument(
         "--callback-url",
         type=str,
@@ -503,11 +532,14 @@ def main():
     GLOBAL_CONFIG["callback_url"] = args.callback_url
     GLOBAL_CONFIG["callback_secret"] = args.callback_secret
 
+    # 自动发现模型文件
+    model_path = discover_model(args.model)
+
     slog.debug(
-        f"log level: {args.log_level}, model: {args.model}, callback url: {args.callback_url}, callback secret: {args.callback_secret}"
+        f"log level: {args.log_level}, model: {model_path}, callback url: {args.callback_url}, callback secret: {args.callback_secret}"
     )
 
-    serve(args.port, args.model)
+    serve(args.port, model_path)
 
 
 if __name__ == "__main__":

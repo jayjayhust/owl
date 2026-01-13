@@ -135,11 +135,13 @@ postgres 和 mysql 的格式即:
 
 > 如何关闭 AI?
 
-ai 默认是开启状态，1 秒检测 5 帧
+ai 默认是开启状态，1 秒检测 1 帧
 
 可以在 `configs/config.toml` 中修改 `disabledAI = true` 关闭 ai 检测
 
+> 国标设备在线，通道离线?
 
+属于 ipc 的问题，请检查 ipc 后台注册的 平台 sip_id 和 域是否与 gowvp/owl 一致。
 
 
 ## 文档
@@ -302,6 +304,8 @@ services:
 [@joestarzxh](https://github.com/joestarzxh)
 [@oldweipro](https://github.com/oldweipro)
 [@beixiaocai](https://github.com/beixiaocai)
+[@chencanfggz](https://github.com/chencanfggz)
+[@zhangxuan1340](https://github.com/zhangxuan1340)
 
 
 ## 许可证

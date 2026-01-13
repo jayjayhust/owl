@@ -49,7 +49,7 @@ func NewServer(cfg *conf.Bootstrap, store ipc.Adapter, sc sms.Core) (*Server, fu
 	iip := ip.InternalIP()
 	uri, _ := sip.ParseSipURI(fmt.Sprintf("sip:%s@%s:%d", cfg.Sip.ID, iip, cfg.Sip.Port))
 	from := sip.Address{
-		DisplayName: sip.String{Str: "gowvp"},
+		DisplayName: sip.String{Str: "gowvp/owl"},
 		URI:         &uri,
 		Params:      sip.NewParams(),
 	}
@@ -85,6 +85,20 @@ func NewServer(cfg *conf.Bootstrap, store ipc.Adapter, sc sms.Core) (*Server, fu
 		}
 	}
 	return &c, c.Close
+}
+
+// SetConfig 热更新 SIP 配置，用于配置变更时更新 from 地址而无需重启服务
+func (s *Server) SetConfig() {
+	cfg := s.gb.cfg
+	iip := ip.InternalIP()
+	uri, _ := sip.ParseSipURI(fmt.Sprintf("sip:%s@%s:%d", cfg.ID, iip, cfg.Port))
+	from := sip.Address{
+		DisplayName: sip.String{Str: "gowvp/owl"},
+		URI:         &uri,
+		Params:      sip.NewParams(),
+	}
+	s.fromAddress = from
+	s.Server.SetFrom(&from)
 }
 
 // startTickerCheck 定时检查离线，通过心跳超时判断设备是否离线

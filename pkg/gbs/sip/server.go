@@ -54,6 +54,11 @@ func NewServer(form *Address) *Server {
 	return srv
 }
 
+// SetFrom 热更新 SIP 源地址配置，用于配置变更时无需重启服务
+func (s *Server) SetFrom(from *Address) {
+	*s.from = *from
+}
+
 func (s *Server) addRoute(method string, handler ...HandlerFunc) {
 	s.route.Store(strings.ToUpper(method), handler)
 }

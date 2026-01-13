@@ -1,11 +1,11 @@
 import logging
+import os
 import time
+from abc import ABC, abstractmethod
 from typing import Any
 
 import numpy as np
 import cv2
-import onnxruntime as ort
-
 
 slog = logging.getLogger("Detector")
 
@@ -94,48 +94,67 @@ COCO_LABELS = [
 ]
 
 
-class ObjectDetector:
+class ModelBackend(ABC):
+    """
+    模型推理后端抽象接口
+    不同模型格式（ONNX、TFLite）需实现此接口，确保上层调用逻辑统一
+    """
 
-    def __init__(self, model_path: str = "yolo11n.onnx"):
-        self.model_path = model_path
-        self.session: ort.InferenceSession | None = None
+    @abstractmethod
+    def load(self, model_path: str) -> bool:
+        """加载模型文件，返回是否成功"""
+        pass
+
+    @abstractmethod
+    def is_ready(self) -> bool:
+        """检查模型是否已加载并可用"""
+        pass
+
+    @abstractmethod
+    def get_input_shape(self) -> tuple:
+        """获取模型输入形状，用于预处理"""
+        pass
+
+    @abstractmethod
+    def infer(self, input_tensor: np.ndarray) -> np.ndarray:
+        """执行推理，返回原始输出"""
+        pass
+
+
+class ONNXBackend(ModelBackend):
+    """
+    ONNX Runtime 推理后端
+    使用 onnxruntime 库加载和执行 ONNX 格式模型
+    """
+
+    def __init__(self):
+        self.session = None
         self.input_name: str = ""
         self.input_shape: tuple = (1, 3, 640, 640)
         self._is_ready = False
-        self.names: dict[int, str] = {i: name for i, name in enumerate(COCO_LABELS)}
 
-    def load_model(self) -> bool:
-        """加载 ONNX 模型并初始化推理会话"""
+    def load(self, model_path: str) -> bool:
         try:
-            slog.info(f"加载 ONNX 模型: {self.model_path} ...")
+            import onnxruntime as ort
+
+            slog.info(f"加载 ONNX 模型: {model_path} ...")
             start_time = time.time()
 
-            # 配置 ONNX Runtime 会话选项
             sess_options = ort.SessionOptions()
             sess_options.graph_optimization_level = (
                 ort.GraphOptimizationLevel.ORT_ENABLE_ALL
             )
-            # 限制线程数，避免在容器中占用过多 CPU
             sess_options.intra_op_num_threads = 4
             sess_options.inter_op_num_threads = 2
 
-            # 优先使用 CPU 执行提供程序
             providers = ["CPUExecutionProvider"]
-
             self.session = ort.InferenceSession(
-                self.model_path, sess_options=sess_options, providers=providers
+                model_path, sess_options=sess_options, providers=providers
             )
 
-            # 获取输入信息
             input_info = self.session.get_inputs()[0]
             self.input_name = input_info.name
             self.input_shape = tuple(input_info.shape)
-
-            # 预热模型
-            dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
-            self._preprocess(dummy_img)
-            dummy_input = self._preprocess(dummy_img)
-            self.session.run(None, {self.input_name: dummy_input})
 
             elapsed = time.time() - start_time
             slog.info(
@@ -143,6 +162,9 @@ class ObjectDetector:
             )
             self._is_ready = True
             return True
+        except ImportError:
+            slog.error("未安装 onnxruntime，无法加载 ONNX 模型")
+            return False
         except Exception as e:
             slog.error(f"加载 ONNX 模型失败: {e}")
             return False
@@ -150,29 +172,335 @@ class ObjectDetector:
     def is_ready(self) -> bool:
         return self._is_ready and self.session is not None
 
+    def get_input_shape(self) -> tuple:
+        return self.input_shape
+
+    def infer(self, input_tensor: np.ndarray) -> np.ndarray:
+        if not self.session:
+            raise RuntimeError("ONNX 模型未加载")
+        outputs = self.session.run(None, {self.input_name: input_tensor})
+        return np.asarray(outputs[0])
+
+
+class TFLiteBackend(ModelBackend):
+    """
+    TensorFlow Lite 推理后端
+    支持两种模型格式：
+    1. YOLO 格式：单输出张量 (1, 84, 8400)
+    2. SSD 格式：多输出张量（boxes, classes, scores, num_detections）
+    """
+
+    def __init__(self):
+        self.interpreter: Any = None
+        self.input_details: list[dict[str, Any]] = []
+        self.output_details: list[dict[str, Any]] = []
+        self.input_shape: tuple = (1, 640, 640, 3)
+        self._is_ready = False
+        self._is_nhwc = True
+        self._is_ssd_format = False  # 区分 SSD 和 YOLO 格式
+        self._input_quantization: tuple[float, int] = (1.0, 0)  # scale, zero_point
+
+    def load(self, model_path: str) -> bool:
+        try:
+            Interpreter = None
+            try:
+                from tflite_runtime.interpreter import Interpreter  # type: ignore
+            except ImportError:
+                try:
+                    from ai_edge_litert.interpreter import Interpreter  # type: ignore
+                except ImportError:
+                    try:
+                        import tensorflow as tf
+
+                        Interpreter = tf.lite.Interpreter
+                    except ImportError:
+                        pass
+
+            if Interpreter is None:
+                raise ImportError("未找到 tflite_runtime、ai_edge_litert 或 tensorflow")
+
+            slog.info(f"加载 TFLite 模型: {model_path} ...")
+            start_time = time.time()
+
+            self.interpreter = Interpreter(model_path=model_path)
+            self.interpreter.allocate_tensors()
+
+            self.input_details = self.interpreter.get_input_details()
+            self.output_details = self.interpreter.get_output_details()
+
+            input_shape = self.input_details[0]["shape"]
+            self.input_shape = tuple(input_shape)
+
+            if len(self.input_shape) == 4:
+                self._is_nhwc = self.input_shape[3] == 3
+
+            # 获取输入量化参数（用于 uint8 量化模型）
+            quant_params = self.input_details[0].get("quantization_parameters", {})
+            scales = quant_params.get("scales", np.array([1.0]))
+            zero_points = quant_params.get("zero_points", np.array([0]))
+            if len(scales) > 0 and len(zero_points) > 0:
+                self._input_quantization = (float(scales[0]), int(zero_points[0]))
+
+            # 检测模型格式：SSD 模型通常有4个输出（boxes, classes, scores, num）
+            # 且输出名称包含 "TFLite_Detection_PostProcess"
+            self._is_ssd_format = len(self.output_details) >= 3 and any(
+                "Detection" in d.get("name", "") for d in self.output_details
+            )
+
+            elapsed = time.time() - start_time
+            format_name = "SSD" if self._is_ssd_format else "YOLO"
+            slog.info(
+                f"TFLite 模型加载完成 (耗时: {elapsed:.2f}s, 输入: {self.input_shape}, "
+                f"格式: {format_name}, 量化: {self._input_quantization})"
+            )
+            self._is_ready = True
+            return True
+        except ImportError:
+            slog.error("未安装 tflite_runtime 或 tensorflow，无法加载 TFLite 模型")
+            return False
+        except Exception as e:
+            slog.error(f"加载 TFLite 模型失败: {e}")
+            return False
+
+    def is_ready(self) -> bool:
+        return self._is_ready and self.interpreter is not None
+
+    def get_input_shape(self) -> tuple:
+        return self.input_shape
+
+    def is_nhwc(self) -> bool:
+        """返回模型是否使用 NHWC 格式"""
+        return self._is_nhwc
+
+    def is_ssd_format(self) -> bool:
+        """返回是否为 SSD 格式（多输出张量）"""
+        return self._is_ssd_format
+
+    def get_input_quantization(self) -> tuple[float, int]:
+        """返回输入量化参数 (scale, zero_point)"""
+        return self._input_quantization
+
+    def get_input_dtype(self) -> np.dtype:
+        """返回模型期望的输入数据类型"""
+        return self.input_details[0]["dtype"]
+
+    def infer(self, input_tensor: np.ndarray) -> np.ndarray:
+        """执行推理，返回第一个输出张量（用于 YOLO 格式）"""
+        if not self.interpreter or len(self.input_details) == 0:
+            raise RuntimeError("TFLite 模型未加载")
+
+        input_dtype = self.input_details[0]["dtype"]
+        if input_tensor.dtype != input_dtype:
+            input_tensor = input_tensor.astype(input_dtype)
+
+        self.interpreter.set_tensor(self.input_details[0]["index"], input_tensor)
+        self.interpreter.invoke()
+
+        output = self.interpreter.get_tensor(self.output_details[0]["index"])
+        return np.asarray(output)
+
+    def infer_ssd(
+        self, input_tensor: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
+        """
+        执行 SSD 格式推理，返回解析后的检测结果
+        SSD 输出格式（已内置后处理）：
+        - boxes: (1, num_boxes, 4) 归一化坐标 [y_min, x_min, y_max, x_max]
+        - classes: (1, num_boxes) 类别 ID
+        - scores: (1, num_boxes) 置信度分数
+        - num_detections: 有效检测数量
+        """
+        if not self.interpreter or len(self.input_details) == 0:
+            raise RuntimeError("TFLite 模型未加载")
+
+        input_dtype = self.input_details[0]["dtype"]
+        if input_tensor.dtype != input_dtype:
+            input_tensor = input_tensor.astype(input_dtype)
+
+        self.interpreter.set_tensor(self.input_details[0]["index"], input_tensor)
+        self.interpreter.invoke()
+
+        # 按名称或索引获取各输出张量
+        boxes = None
+        classes = None
+        scores = None
+        num_detections = 0
+
+        for detail in self.output_details:
+            name = detail.get("name", "")
+            tensor = self.interpreter.get_tensor(detail["index"])
+
+            if "boxes" in name.lower() or (
+                detail["shape"][-1] == 4 and len(detail["shape"]) == 3
+            ):
+                boxes = np.asarray(tensor)
+            elif "class" in name.lower() or (
+                len(detail["shape"]) == 2
+                and detail["shape"][1] > 1
+                and boxes is not None
+            ):
+                classes = np.asarray(tensor)
+            elif "score" in name.lower() or ":2" in name:
+                scores = np.asarray(tensor)
+            elif "num" in name.lower() or (
+                len(detail["shape"]) == 1 and detail["shape"][0] == 1
+            ):
+                num_detections = int(tensor[0])
+
+        # 兜底处理：按输出顺序分配
+        if boxes is None or classes is None or scores is None:
+            outputs = [
+                self.interpreter.get_tensor(d["index"]) for d in self.output_details
+            ]
+            if len(outputs) >= 4:
+                boxes = np.asarray(outputs[0])
+                classes = np.asarray(outputs[1])
+                scores = np.asarray(outputs[2])
+                num_detections = int(outputs[3][0]) if outputs[3].size > 0 else 0
+
+        if boxes is None:
+            boxes = np.array([])
+        if classes is None:
+            classes = np.array([])
+        if scores is None:
+            scores = np.array([])
+
+        return boxes, classes, scores, num_detections
+
+
+def get_model_type(model_path: str) -> str:
+    """根据模型文件后缀判断模型类型"""
+    ext = os.path.splitext(model_path)[1].lower()
+    return "tflite" if ext == ".tflite" else "onnx"
+
+
+def create_backend(model_type: str) -> ModelBackend:
+    """
+    根据模型类型创建对应的推理后端
+    """
+    if model_type == "tflite":
+        return TFLiteBackend()
+    else:
+        return ONNXBackend()
+
+
+class ObjectDetector:
+    """
+    目标检测器 - 支持多种模型格式（ONNX、TFLite）
+    通过统一的 ModelBackend 接口实现模型无关的检测逻辑
+    """
+
+    def __init__(self, model_path: str):
+        self.model_path = model_path
+        self.model_type = get_model_type(model_path)
+        self.backend: ModelBackend | None = None
+        self.input_shape: tuple = (1, 3, 640, 640)
+        self._is_ready = False
+        self.names: dict[int, str] = {i: name for i, name in enumerate(COCO_LABELS)}
+
+    def load_model(self) -> bool:
+        """加载模型并初始化推理后端"""
+        try:
+            start_time = time.time()
+
+            # 创建对应类型的后端
+            self.backend = create_backend(self.model_type)
+
+            # 加载模型
+            if not self.backend.load(self.model_path):
+                return False
+
+            self.input_shape = self.backend.get_input_shape()
+
+            # 预热模型
+            self._warmup()
+
+            elapsed = time.time() - start_time
+            slog.info(f"模型预热完成 (总耗时: {elapsed:.2f}s)")
+            self._is_ready = True
+            return True
+        except Exception as e:
+            slog.error(f"加载模型失败: {e}")
+            return False
+
+    def _warmup(self) -> None:
+        """预热模型，减少首次推理延迟"""
+        if not self.backend:
+            return
+
+        dummy_img = np.zeros((640, 640, 3), dtype=np.uint8)
+        dummy_input = self._preprocess(dummy_img)
+        self.backend.infer(dummy_input)
+        slog.info("模型预热完成")
+
+    def is_ready(self) -> bool:
+        return self._is_ready and self.backend is not None and self.backend.is_ready()
+
+    def _get_target_size(self) -> int:
+        """获取模型期望的输入尺寸"""
+        # NCHW: (1, 3, H, W) -> shape[2]
+        # NHWC: (1, H, W, 3) -> shape[1]
+        if self._is_nhwc_format():
+            return int(self.input_shape[1])
+        return int(self.input_shape[2])
+
+    def _is_nhwc_format(self) -> bool:
+        """判断当前后端是否使用 NHWC 格式"""
+        if isinstance(self.backend, TFLiteBackend):
+            return self.backend.is_nhwc()
+        return False
+
+    def _is_ssd_format(self) -> bool:
+        """判断当前后端是否为 SSD 格式"""
+        if isinstance(self.backend, TFLiteBackend):
+            return self.backend.is_ssd_format()
+        return False
+
     def _preprocess(self, image: np.ndarray) -> np.ndarray:
         """
         预处理图像：调整大小、归一化、转换格式
-        YOLO 期望输入格式: NCHW, float32, 归一化到 [0, 1]
+        根据后端类型自动选择 NCHW 或 NHWC 格式，并处理量化输入
         """
-        # 保持宽高比的 letterbox 缩放
-        target_size = self.input_shape[2]  # 640
+        target_size = self._get_target_size()
         h, w = image.shape[:2]
+
+        # SSD 模型使用直接缩放（不保持宽高比）
+        # YOLO 模型使用 letterbox 缩放（保持宽高比）
+        if self._is_ssd_format():
+            resized = cv2.resize(
+                image, (target_size, target_size), interpolation=cv2.INTER_LINEAR
+            )
+            rgb = resized[:, :, ::-1]  # BGR -> RGB
+
+            # 检查是否需要量化为 uint8
+            if isinstance(self.backend, TFLiteBackend):
+                input_dtype = self.backend.get_input_dtype()
+                if input_dtype == np.uint8:
+                    # 直接返回 uint8 格式
+                    return np.expand_dims(rgb.astype(np.uint8), axis=0)
+
+            # float32 格式
+            rgb = rgb.astype(np.float32) / 255.0
+            return np.expand_dims(rgb, axis=0)
+
+        # YOLO letterbox 预处理
         scale = min(target_size / h, target_size / w)
         new_h, new_w = int(h * scale), int(w * scale)
 
-        # 缩放图像
         resized = cv2.resize(image, (new_w, new_h), interpolation=cv2.INTER_LINEAR)
 
-        # 创建正方形画布并居中放置图像
         canvas = np.full((target_size, target_size, 3), 114, dtype=np.uint8)
         top = (target_size - new_h) // 2
         left = (target_size - new_w) // 2
         canvas[top : top + new_h, left : left + new_w] = resized
 
-        # BGR -> RGB, HWC -> CHW, 归一化
-        blob = canvas[:, :, ::-1].transpose(2, 0, 1).astype(np.float32) / 255.0
-        return np.expand_dims(blob, axis=0)
+        rgb = canvas[:, :, ::-1].astype(np.float32) / 255.0
+
+        if self._is_nhwc_format():
+            return np.expand_dims(rgb, axis=0)
+        else:
+            blob = rgb.transpose(2, 0, 1)
+            return np.expand_dims(blob, axis=0)
 
     def _postprocess(
         self,
@@ -214,7 +542,7 @@ class ObjectDetector:
 
         # 缩放坐标到原始图像尺寸
         orig_h, orig_w = original_shape
-        target_size = self.input_shape[2]
+        target_size = self._get_target_size()
         scale = min(target_size / orig_h, target_size / orig_w)
         pad_h = (target_size - orig_h * scale) / 2
         pad_w = (target_size - orig_w * scale) / 2
@@ -341,18 +669,17 @@ class ObjectDetector:
         self, image: np.ndarray, threshold: float, label_filter: list[str] | None = None
     ) -> list[dict[str, Any]]:
         """对单张图像执行检测"""
-        if not self.session:
+        if not self.backend or not self.backend.is_ready():
             return []
 
         # 预处理
         input_tensor = self._preprocess(image)
 
         # 推理
-        outputs = self.session.run(None, {self.input_name: input_tensor})
+        output = self.backend.infer(input_tensor)
 
         # 后处理
         original_shape = image.shape[:2]
-        output: np.ndarray = np.asarray(outputs[0])
         return self._postprocess(output, original_shape, threshold, label_filter)
 
 

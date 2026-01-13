@@ -310,42 +310,43 @@ type SetServerConfigRequest struct {
 	RtcStartBitrate                    *string `json:"rtc.start_bitrate,omitempty"`
 	RtcTCPPort                         *string `json:"rtc.tcpPort,omitempty"`
 	RtcTimeoutSec                      *string `json:"rtc.timeoutSec,omitempty"`
-	RtmpDirectProxy                    *string `json:"rtmp.directProxy,omitempty"`
-	RtmpEnhanced                       *string `json:"rtmp.enhanced,omitempty"`
-	RtmpHandshakeSecond                *string `json:"rtmp.handshakeSecond,omitempty"`
-	RtmpKeepAliveSecond                *string `json:"rtmp.keepAliveSecond,omitempty"`
-	RtmpPort                           *string `json:"rtmp.port,omitempty"`
-	RtmpSslport                        *string `json:"rtmp.sslport,omitempty"`
-	RtpAudioMtuSize                    *string `json:"rtp.audioMtuSize,omitempty"`
-	RtpH264StapA                       *string `json:"rtp.h264_stap_a,omitempty"`
-	RtpLowLatency                      *string `json:"rtp.lowLatency,omitempty"`
-	RtpRtpMaxSize                      *string `json:"rtp.rtpMaxSize,omitempty"`
-	RtpVideoMtuSize                    *string `json:"rtp.videoMtuSize,omitempty"`
-	RtpProxyDumpDir                    *string `json:"rtp_proxy.dumpDir,omitempty"`
-	RtpProxyGopCache                   *string `json:"rtp_proxy.gop_cache,omitempty"`
-	RtpProxyH264Pt                     *string `json:"rtp_proxy.h264_pt,omitempty"`
-	RtpProxyH265Pt                     *string `json:"rtp_proxy.h265_pt,omitempty"`
-	RtpProxyOpusPt                     *string `json:"rtp_proxy.opus_pt,omitempty"`
-	RtpProxyPort                       *string `json:"rtp_proxy.port,omitempty"`
-	RtpProxyPortRange                  *string `json:"rtp_proxy.port_range,omitempty"`
-	RtpProxyPsPt                       *string `json:"rtp_proxy.ps_pt,omitempty"`
-	RtpProxyRtpG711DurMs               *string `json:"rtp_proxy.rtp_g711_dur_ms,omitempty"`
-	RtpProxyTimeoutSec                 *string `json:"rtp_proxy.timeoutSec,omitempty"`
-	RtpProxyUDPRecvSocketBuffer        *string `json:"rtp_proxy.udp_recv_socket_buffer,omitempty"`
-	RtspAuthBasic                      *string `json:"rtsp.authBasic,omitempty"`
-	RtspDirectProxy                    *string `json:"rtsp.directProxy,omitempty"`
-	RtspHandshakeSecond                *string `json:"rtsp.handshakeSecond,omitempty"`
-	RtspKeepAliveSecond                *string `json:"rtsp.keepAliveSecond,omitempty"`
-	RtspLowLatency                     *string `json:"rtsp.lowLatency,omitempty"`
-	RtspPort                           *string `json:"rtsp.port,omitempty"`
-	RtspRtpTransportType               *string `json:"rtsp.rtpTransportType,omitempty"`
-	RtspSslport                        *string `json:"rtsp.sslport,omitempty"`
-	ShellMaxReqSize                    *string `json:"shell.maxReqSize,omitempty"`
-	ShellPort                          *string `json:"shell.port,omitempty"`
-	SrtLatencyMul                      *string `json:"srt.latencyMul,omitempty"`
-	SrtPktBufSize                      *string `json:"srt.pktBufSize,omitempty"`
-	SrtPort                            *string `json:"srt.port,omitempty"`
-	SrtTimeoutSec                      *string `json:"srt.timeoutSec,omitempty"`
+	// RTCEnableTurn                      *string `json:"rtc.enableTurn,omitempty"`
+	RtmpDirectProxy             *string `json:"rtmp.directProxy,omitempty"`
+	RtmpEnhanced                *string `json:"rtmp.enhanced,omitempty"`
+	RtmpHandshakeSecond         *string `json:"rtmp.handshakeSecond,omitempty"`
+	RtmpKeepAliveSecond         *string `json:"rtmp.keepAliveSecond,omitempty"`
+	RtmpPort                    *string `json:"rtmp.port,omitempty"`
+	RtmpSslport                 *string `json:"rtmp.sslport,omitempty"`
+	RtpAudioMtuSize             *string `json:"rtp.audioMtuSize,omitempty"`
+	RtpH264StapA                *string `json:"rtp.h264_stap_a,omitempty"`
+	RtpLowLatency               *string `json:"rtp.lowLatency,omitempty"`
+	RtpRtpMaxSize               *string `json:"rtp.rtpMaxSize,omitempty"`
+	RtpVideoMtuSize             *string `json:"rtp.videoMtuSize,omitempty"`
+	RtpProxyDumpDir             *string `json:"rtp_proxy.dumpDir,omitempty"`
+	RtpProxyGopCache            *string `json:"rtp_proxy.gop_cache,omitempty"`
+	RtpProxyH264Pt              *string `json:"rtp_proxy.h264_pt,omitempty"`
+	RtpProxyH265Pt              *string `json:"rtp_proxy.h265_pt,omitempty"`
+	RtpProxyOpusPt              *string `json:"rtp_proxy.opus_pt,omitempty"`
+	RtpProxyPort                *string `json:"rtp_proxy.port,omitempty"`
+	RtpProxyPortRange           *string `json:"rtp_proxy.port_range,omitempty"`
+	RtpProxyPsPt                *string `json:"rtp_proxy.ps_pt,omitempty"`
+	RtpProxyRtpG711DurMs        *string `json:"rtp_proxy.rtp_g711_dur_ms,omitempty"`
+	RtpProxyTimeoutSec          *string `json:"rtp_proxy.timeoutSec,omitempty"`
+	RtpProxyUDPRecvSocketBuffer *string `json:"rtp_proxy.udp_recv_socket_buffer,omitempty"`
+	RtspAuthBasic               *string `json:"rtsp.authBasic,omitempty"`
+	RtspDirectProxy             *string `json:"rtsp.directProxy,omitempty"`
+	RtspHandshakeSecond         *string `json:"rtsp.handshakeSecond,omitempty"`
+	RtspKeepAliveSecond         *string `json:"rtsp.keepAliveSecond,omitempty"`
+	RtspLowLatency              *string `json:"rtsp.lowLatency,omitempty"`
+	RtspPort                    *string `json:"rtsp.port,omitempty"`
+	RtspRtpTransportType        *string `json:"rtsp.rtpTransportType,omitempty"`
+	RtspSslport                 *string `json:"rtsp.sslport,omitempty"`
+	ShellMaxReqSize             *string `json:"shell.maxReqSize,omitempty"`
+	ShellPort                   *string `json:"shell.port,omitempty"`
+	SrtLatencyMul               *string `json:"srt.latencyMul,omitempty"`
+	SrtPktBufSize               *string `json:"srt.pktBufSize,omitempty"`
+	SrtPort                     *string `json:"srt.port,omitempty"`
+	SrtTimeoutSec               *string `json:"srt.timeoutSec,omitempty"`
 }
 
 func (e *Engine) GetServerConfig() (*GetServerConfigResponse, error) {

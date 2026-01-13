@@ -18,6 +18,7 @@ import (
 type ConfigAPI struct {
 	configCore config.Core
 	conf       *conf.Bootstrap
+	uc         *Usecase
 }
 
 func NewConfigAPI(db *gorm.DB, conf *conf.Bootstrap) ConfigAPI {
@@ -83,5 +84,7 @@ func (a ConfigAPI) editSIP(_ *gin.Context, in *conf.SIP) (gin.H, error) {
 	if err := conf.WriteConfig(a.conf, a.conf.ConfigPath); err != nil {
 		return nil, reason.ErrServer.SetMsg(err.Error())
 	}
+	a.uc.SipServer.SetConfig()
+
 	return gin.H{"msg": "ok"}, nil
 }

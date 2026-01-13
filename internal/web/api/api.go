@@ -62,10 +62,11 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 		AllowMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"},
 		AllowHeaders: []string{
 			"Accept", "Content-Length", "Content-Type", "Range", "Accept-Language",
-			"Origin", "Authorization",
+			"Origin", "Authorization", "Referer", "User-Agent",
 			"Accept-Encoding",
 			"Cache-Control", "Pragma", "X-Requested-With",
 			"Sec-Fetch-Mode", "Sec-Fetch-Site", "Sec-Fetch-Dest",
+			"Sec-Ch-Ua", "Sec-Ch-Ua-Mobile", "Sec-Ch-Ua-Platform",
 			"Dnt", "X-Forwarded-For", "X-Forwarded-Proto", "X-Forwarded-Host",
 			"X-Real-IP", "X-Request-ID", "X-Request-Start", "X-Request-Time",
 		},
@@ -105,6 +106,7 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 	registerPushAPI(r, uc.MediaAPI, auth)
 	registerGB28181(r, uc.GB28181API, auth)
 	registerProxy(r, uc.ProxyAPI, auth)
+	uc.ConfigAPI.uc = uc
 	registerConfig(r, uc.ConfigAPI, auth)
 	registerSms(r, uc.SMSAPI, auth)
 	RegisterUser(r, uc.UserAPI, auth)
@@ -327,6 +329,7 @@ func (uc *Usecase) proxySMS(c *gin.Context) {
 	fullAddr, _ := url.Parse(addr)
 	c.Request.URL.Path = ""
 	proxy := httputil.NewSingleHostReverseProxy(fullAddr)
+
 	proxy.Director = func(req *http.Request) {
 		// 设置请求的URL
 		req.URL.Scheme = "http"

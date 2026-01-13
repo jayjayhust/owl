@@ -1,4 +1,4 @@
-# ONNX Runtime - 替代 PyTorch，大幅减小镜像体积
+# ONNX Runtime - 用于加载 .onnx 模型
 onnxruntime>=1.17.0
 
 # gRPC 框架

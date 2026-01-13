@@ -43,13 +43,13 @@ func (a PushAPI) findStreamPush(c *gin.Context, in *push.FindStreamPushInput) (*
 		return nil, err
 	}
 
-	cacheFn := hook.UseCache(func(s string) (*sms.MediaServer, error) {
+	cacheFn := func(s string) (*sms.MediaServer, error) {
 		v, err := a.smsCore.GetMediaServer(c.Request.Context(), s)
 		if err != nil {
 			slog.ErrorContext(c.Request.Context(), "GetMediaServer", "err", err)
 		}
 		return v, err
-	})
+	}
 
 	out := make([]*push.FindStreamPushOutputItem, len(items))
 	for i, item := range items {
@@ -58,8 +58,12 @@ func (a PushAPI) findStreamPush(c *gin.Context, in *push.FindStreamPushInput) (*
 		if mediaID == "" {
 			mediaID = sms.DefaultMediaServerID
 		}
-		if svr, _, _ := cacheFn(mediaID); svr != nil {
-			addr := fmt.Sprintf("rtmp://%s:%d/%s/%s", web.GetHost(c.Request), svr.Ports.RTMP, item.App, item.Stream)
+		if svr, _ := cacheFn(mediaID); svr != nil {
+			port := svr.Ports.RTMP
+			if port == 0 {
+				port = 1935
+			}
+			addr := fmt.Sprintf("rtmp://%s:%d/%s/%s", web.GetHost(c.Request), port, item.App, item.Stream)
 			if !item.IsAuthDisabled {
 				addr += fmt.Sprintf("?sign=%s", hook.MD5(a.conf.Server.RTMPSecret))
 			}

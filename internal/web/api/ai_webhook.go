@@ -136,7 +136,8 @@ func (a AIWebhookAPI) onEvents(c *gin.Context, in *AIDetectionInput) (AIWebhookO
 			Score:     float32(det.Confidence),
 			Zones:     string(zonesJSON),
 			ImagePath: imagePath,
-			Model:     "yolo11n",
+			// TODO: 模型名称可以根据模型自定义
+			Model: "default",
 		}
 
 		if _, err := a.eventCore.AddEvent(ctx, eventInput); err != nil {
@@ -259,7 +260,7 @@ func (a *AIWebhookAPI) StartAIDetection(ctx context.Context, ch *ipc.Channel, rt
 		CameraId:       ch.ID,
 		CameraName:     ch.Name,
 		RtspUrl:        rtspURL,
-		DetectFps:      5,
+		DetectFps:      1,
 		Labels:         labels,
 		Threshold:      0.75,
 		RoiPoints:      roiPoints,

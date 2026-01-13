@@ -20,9 +20,9 @@ func (d *ZLMDriver) GetStreamLiveAddr(ctx context.Context, ms *MediaServer, http
 	var out StreamLiveAddr
 	out.Label = "ZLM"
 	wsPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "wss", 1), "http", "ws", 1)
-	out.WSFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", wsPrefix, stream)
-	out.HTTPFLV = fmt.Sprintf("%s/proxy/sms/%s.live.flv", httpPrefix, stream)
-	out.HLS = fmt.Sprintf("%s/proxy/sms/%s/hls.fmp4.m3u8", httpPrefix, stream)
+	out.WSFLV = fmt.Sprintf("%s/proxy/sms/%s/%s.live.flv", wsPrefix, app, stream)
+	out.HTTPFLV = fmt.Sprintf("%s/proxy/sms/%s/%s.live.flv", httpPrefix, app, stream)
+	out.HLS = fmt.Sprintf("%s/proxy/sms/%s/%s/hls.fmp4.m3u8", httpPrefix, app, stream)
 	rtcPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "webrtc", 1), "http", "webrtc", 1)
 	out.WebRTC = fmt.Sprintf("%s/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", rtcPrefix, app, stream)
 	out.RTMP = fmt.Sprintf("rtmp://%s:%d/%s", host, ms.Ports.RTMP, stream)
@@ -81,9 +81,18 @@ func (d *ZLMDriver) Connect(ctx context.Context, ms *MediaServer) error {
 func (d *ZLMDriver) Setup(ctx context.Context, ms *MediaServer, webhookURL string) error {
 	engine := d.withConfig(ms)
 
+	// 拼接 IP 但是不要空格
+	ips := make([]string, 0, 2)
+	for _, ip := range []string{ms.SDPIP, ms.IP} {
+		if ip != "" {
+			ips = append(ips, ip)
+		}
+	}
+	_ = ips
 	// 构造配置请求
 	req := zlm.SetServerConfigRequest{
-		RtcExternIP:          new(ms.IP),
+		RtcExternIP: new(strings.Join(ips, ",")),
+
 		GeneralMediaServerID: new(ms.ID),
 		HookEnable:           new("1"),
 		HookOnFlowReport:     new(""),

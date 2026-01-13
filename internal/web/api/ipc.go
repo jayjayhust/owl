@@ -281,7 +281,7 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 		host = h
 	}
 
-	item := a.uc.SMSAPI.smsCore.GetStreamLiveAddr(svr, prefix, host, app, stream)
+	item := a.uc.SMSAPI.smsCore.GetStreamLiveAddr(svr, prefix, host, app, appStream)
 	out := playOutput{
 		App:    app,
 		Stream: appStream,
