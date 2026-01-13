@@ -113,6 +113,7 @@ func (d *ZLMDriver) Setup(ctx context.Context, ms *MediaServer, webhookURL strin
 		HookOnShellLogin:               new(""),
 		HookOnStreamChanged:            new(fmt.Sprintf("%s/on_stream_changed", webhookURL)),
 		HookOnServerKeepalive:          new(fmt.Sprintf("%s/on_server_keepalive", webhookURL)),
+		HookOnServerStarted:            new(fmt.Sprintf("%s/on_server_started", webhookURL)),
 		HookTimeoutSec:                 new("10"),
 		HookAliveInterval:              new(fmt.Sprint(ms.HookAliveInterval)),
 		ProtocolContinuePushMs:         new("3000"),

@@ -22,6 +22,11 @@ type Channel struct {
 	CreatedAt orm.Time  `gorm:"column:created_at;notNull;default:CURRENT_TIMESTAMP;comment:创建时间" json:"created_at"` // 创建时间
 	UpdatedAt orm.Time  `gorm:"column:updated_at;notNull;default:CURRENT_TIMESTAMP;comment:更新时间" json:"updated_at"` // 更新时间
 	Type      string    `gorm:"column:type;notNull;default:'';comment:通道类型" json:"type"`                            // 通道类型，继承父级设备类型
+
+	// RTMP/RTSP 流配置字段
+	App    string       `gorm:"column:app;index;notNull;default:'';comment:应用名" json:"app"`        // 应用名 (RTMP/RTSP)
+	Stream string       `gorm:"column:stream;index;notNull;default:'';comment:流 ID" json:"stream"` // 流 ID (RTMP/RTSP)
+	Config StreamConfig `gorm:"column:config;notNull;default:'{}';type:jsonb" json:"config"`       // 流配置 (RTMP/RTSP)
 }
 
 // TableName database table name
@@ -48,4 +53,12 @@ func (c *Channel) IsOnvif() bool {
 
 func (c *Channel) IsGB28181() bool {
 	return strings.HasPrefix(c.ID, bz.IDPrefixGBChannel) || c.Type == TypeGB28181 || c.Type == ""
+}
+
+func (c *Channel) IsRTMP() bool {
+	return c.Type == TypeRTMP || bz.IsRTMP(c.ID)
+}
+
+func (c *Channel) IsRTSP() bool {
+	return c.Type == TypeRTSP || bz.IsRTSP(c.ID)
 }

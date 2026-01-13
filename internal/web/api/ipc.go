@@ -19,7 +19,6 @@ import (
 	"github.com/gowvp/owl/internal/adapter/onvifadapter"
 	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/gowvp/owl/internal/core/ipc"
-	"github.com/gowvp/owl/internal/core/push"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/zlm"
 	"github.com/ixugo/goddd/domain/uniqueid"
@@ -100,7 +99,9 @@ func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
 	{
 		group := g.Group("/channels", handler...)
 		group.GET("", web.WrapH(api.findChannel))                   // 通道列表（所有协议）
+		group.POST("", web.WrapH(api.addChannel))                   // 添加通道（RTMP/RTSP）
 		group.PUT("/:id", web.WrapH(api.editChannel))               // 修改通道（所有协议）
+		group.DELETE("/:id", web.WrapH(api.delChannel))             // 删除通道（RTMP/RTSP）
 		group.POST("/:id/play", web.WrapH(api.play))                // 播放（所有协议）
 		group.POST("/:id/snapshot", web.WrapH(api.refreshSnapshot)) // 图像抓拍（所有协议）
 		group.GET("/:id/snapshot", api.getSnapshot)                 // 获取图像（所有协议）
@@ -170,6 +171,13 @@ func (a IPCAPI) FindChannelsForDevice(c *gin.Context, in *ipc.FindDeviceInput) (
 	sort.SliceStable(items, func(i, j int) bool {
 		return items[i].IsOnline && !items[j].IsOnline
 	})
+	// 按照第 1 个通道是否在线排序
+	sort.SliceStable(items, func(i, j int) bool {
+		if len(items[i].Children) > 0 && len(items[j].Children) > 0 {
+			return items[i].Children[0].IsOnline && !items[j].Children[0].IsOnline
+		}
+		return false
+	})
 
 	return gin.H{"items": items, "total": total}, err
 }
@@ -178,7 +186,45 @@ func (a IPCAPI) FindChannelsForDevice(c *gin.Context, in *ipc.FindDeviceInput) (
 
 func (a IPCAPI) findChannel(c *gin.Context, in *ipc.FindChannelInput) (any, error) {
 	items, total, err := a.ipc.FindChannel(c.Request.Context(), in)
-	return gin.H{"items": items, "total": total}, err
+	if err != nil {
+		return nil, err
+	}
+
+	// 为 RTMP 类型通道生成推流地址
+	a.fillRTMPPushAddr(c, items)
+
+	return gin.H{"items": items, "total": total}, nil
+}
+
+// fillRTMPPushAddr 为 RTMP 类型通道填充推流地址
+func (a IPCAPI) fillRTMPPushAddr(c *gin.Context, items []*ipc.Channel) {
+	if a.uc == nil {
+		return
+	}
+
+	// 获取流媒体服务器配置
+	ms, err := a.uc.SMSAPI.smsCore.GetMediaServer(c.Request.Context(), sms.DefaultMediaServerID)
+	if err != nil {
+		return
+	}
+
+	host := web.GetHost(c.Request)
+
+	rtmpPort := ms.Ports.RTMP
+	if rtmpPort == 0 {
+		rtmpPort = 1935 // 默认 RTMP 端口
+	}
+
+	sign := hook.MD5(a.uc.Conf.Server.RTMPSecret)
+
+	for _, item := range items {
+		if item.IsRTMP() {
+			item.Config.PushAddr = fmt.Sprintf("rtmp://%s:%d/%s/%s", host, rtmpPort, item.App, item.Stream)
+			if !item.Config.IsAuthDisabled {
+				item.Config.PushAddr += "?sign=" + sign
+			}
+		}
+	}
 }
 
 // func (a GB28181API) getChannel(c *gin.Context, _ *struct{}) (any, error) {
@@ -191,14 +237,26 @@ func (a IPCAPI) editChannel(c *gin.Context, in *ipc.EditChannelInput) (any, erro
 	return a.ipc.EditChannel(c.Request.Context(), in, cid)
 }
 
-// func (a GB28181API) addChannel(c *gin.Context, in *gb28181.AddChannelInput) (any, error) {
-// 	return a.gb28181Core.AddChannel(c.Request.Context(), in)
-// }
+// addChannel 添加 RTMP/RTSP 通道
+func (a IPCAPI) addChannel(c *gin.Context, in *ipc.AddChannelInput) (any, error) {
+	in.Type = strings.ToUpper(in.Type)
+	if !slices.Contains([]string{ipc.TypeRTMP, ipc.TypeRTSP}, in.Type) {
+		return nil, reason.ErrBadRequest.SetMsg("仅支持 RTMP/RTSP 类型通道")
+	}
+	return a.ipc.AddChannel(c.Request.Context(), in)
+}
 
-// func (a GB28181API) delChannel(c *gin.Context, _ *struct{}) (any, error) {
-// 	channelID := c.Param("id")
-// 	return a.gb28181Core.DelChannel(c.Request.Context(), channelID)
-// }
+// delChannel 删除 RTMP/RTSP 通道
+func (a IPCAPI) delChannel(c *gin.Context, _ *struct{}) (any, error) {
+	channelID := c.Param("id")
+
+	// 仅允许删除 RTMP/RTSP 类型通道
+	if !bz.IsRTMP(channelID) && !bz.IsRTSP(channelID) {
+		return nil, reason.ErrBadRequest.SetMsg("仅支持删除 RTMP/RTSP 类型通道")
+	}
+
+	return a.ipc.DelChannel(c.Request.Context(), channelID)
+}
 
 func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 	channelID := c.Param("id")
@@ -211,7 +269,6 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 		if a.uc.Conf.Media.SDPIP == "127.0.0.1" {
 			return nil, reason.ErrUsedLogic.SetMsg("请先配置流媒体 SDP 收流地址")
 		}
-		// a.uc.SipServer.
 		ch, err := a.ipc.GetChannel(c.Request.Context(), channelID)
 		if err != nil {
 			return nil, err
@@ -219,34 +276,42 @@ func (a IPCAPI) play(c *gin.Context, _ *struct{}) (*playOutput, error) {
 
 		app = "rtp"
 		appStream = ch.ID
-
 		mediaServerID = sms.DefaultMediaServerID
 
 	} else if bz.IsRTMP(channelID) {
-		pu, err := a.uc.MediaAPI.pushCore.GetStreamPush(c.Request.Context(), channelID)
+		// 从 Channel 获取 RTMP 推流信息
+		ch, err := a.ipc.GetChannel(c.Request.Context(), channelID)
 		if err != nil {
 			return nil, err
 		}
-		if pu.Status != push.StatusPushing {
+		if !ch.IsOnline {
 			return nil, reason.ErrNotFound.SetMsg("未推流")
 		}
-		app = pu.App
-		appStream = pu.Stream
-		mediaServerID = pu.MediaServerID
+		app = ch.App
+		appStream = ch.Stream
+		mediaServerID = ch.Config.MediaServerID
+		if mediaServerID == "" {
+			mediaServerID = sms.DefaultMediaServerID
+		}
 
-		if !pu.IsAuthDisabled && pu.Session != "" {
-			session = "session=" + pu.Session
+		if !ch.Config.IsAuthDisabled && ch.Config.Session != "" {
+			session = "session=" + ch.Config.Session
 		}
 	} else if bz.IsRTSP(channelID) {
-		proxy, err := a.uc.ProxyAPI.proxyCore.GetStreamProxy(c.Request.Context(), channelID)
+		// 从 Channel 获取 RTSP 拉流代理信息
+		ch, err := a.ipc.GetChannel(c.Request.Context(), channelID)
 		if err != nil {
 			return nil, err
 		}
-		app = proxy.App
-		// TODO: 2025-12-03, 防止旧版本无法播放，强制为 live 先
-		app = "live" //  proxy.App
-		appStream = proxy.Stream
-		mediaServerID = sms.DefaultMediaServerID
+		app = ch.App
+		if app == "" {
+			app = "live"
+		}
+		appStream = ch.Stream
+		mediaServerID = ch.Config.MediaServerID
+		if mediaServerID == "" {
+			mediaServerID = sms.DefaultMediaServerID
+		}
 	} else if bz.IsOnvif(channelID) {
 		app = "live"
 		appStream = channelID
@@ -553,20 +618,17 @@ func (a IPCAPI) buildRTSPURL(ctx context.Context, channelID string) (string, err
 	} else if bz.IsOnvif(channelID) {
 		app = "live"
 		stream = channelID
-	} else if bz.IsRTSP(channelID) {
-		proxy, err := a.uc.ProxyAPI.proxyCore.GetStreamProxy(ctx, channelID)
+	} else if bz.IsRTSP(channelID) || bz.IsRTMP(channelID) {
+		// 从 Channel 获取流信息
+		ch, err := a.ipc.GetChannel(ctx, channelID)
 		if err != nil {
 			return "", err
 		}
-		app = "live"
-		stream = proxy.Stream
-	} else if bz.IsRTMP(channelID) {
-		pu, err := a.uc.MediaAPI.pushCore.GetStreamPush(ctx, channelID)
-		if err != nil {
-			return "", err
+		app = ch.App
+		if app == "" {
+			app = "live"
 		}
-		app = pu.App
-		stream = pu.Stream
+		stream = ch.Stream
 	} else {
 		return "", ErrChannelNotSupported
 	}

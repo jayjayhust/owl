@@ -4,15 +4,14 @@ import (
 	"context"
 
 	"github.com/gowvp/owl/internal/core/ipc"
-	"github.com/gowvp/owl/internal/core/proxy"
 	"github.com/gowvp/owl/internal/core/sms"
 )
 
 var _ ipc.Protocoler = (*Adapter)(nil)
 
 type Adapter struct {
-	proxyCore *proxy.Core
-	smsCore   sms.Core
+	ipcCore ipc.Core
+	smsCore sms.Core
 }
 
 // DeleteDevice implements ipc.Protocoler.
@@ -20,10 +19,10 @@ func (a *Adapter) DeleteDevice(ctx context.Context, device *ipc.Device) error {
 	return nil
 }
 
-func NewAdapter(proxyCore *proxy.Core, smsCore sms.Core) *Adapter {
+func NewAdapter(ipcCore ipc.Core, smsCore sms.Core) *Adapter {
 	return &Adapter{
-		proxyCore: proxyCore,
-		smsCore:   smsCore,
+		ipcCore: ipcCore,
+		smsCore: smsCore,
 	}
 }
 
@@ -38,8 +37,9 @@ func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
 }
 
 // OnStreamNotFound implements ipc.Protocoler.
+// 当流不存在时，从 Channel 获取配置并启动拉流代理
 func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream string) error {
-	proxy, err := a.proxyCore.GetStreamProxy(ctx, stream)
+	ch, err := a.ipcCore.GetChannel(ctx, stream)
 	if err != nil {
 		return err
 	}
@@ -49,18 +49,21 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream strin
 		return err
 	}
 	resp, err := a.smsCore.AddStreamProxy(svr, sms.AddStreamProxyRequest{
-		App:     proxy.App,
-		Stream:  proxy.Stream,
-		URL:     proxy.SourceURL,
-		RTPType: proxy.Transport,
+		App:     ch.App,
+		Stream:  ch.Stream,
+		URL:     ch.Config.SourceURL,
+		RTPType: ch.Config.Transport,
 	})
 	if err != nil {
 		return err
 	}
-	// 用于关闭
-	a.proxyCore.EditStreamProxyKey(ctx, resp.Data.Key, proxy.ID)
 
-	return nil
+	// 更新 StreamKey 和 IsOnline（用于后续关闭拉流代理）
+	_, err = a.ipcCore.EditChannelConfigAndOnline(ctx, ch.ID, true, func(cfg *ipc.StreamConfig) {
+		cfg.StreamKey = resp.Data.Key
+	})
+
+	return err
 }
 
 // QueryCatalog implements ipc.Protocoler.

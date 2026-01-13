@@ -24,11 +24,21 @@ func GenerateDID(d *Device, uni uniqueid.Core) string {
 	return uni.UniqueID(bz.IDPrefixGB)
 }
 
+// GenerateChannelID 根据通道类型生成唯一 ID
 func GenerateChannelID(c *Channel, uni uniqueid.Core) string {
-	if c.IsOnvif() {
+	switch c.Type {
+	case TypeOnvif:
 		return uni.UniqueID(bz.IDPrefixOnvifChannel)
+	case TypeRTMP:
+		return uni.UniqueID(bz.IDPrefixRTMP)
+	case TypeRTSP:
+		return uni.UniqueID(bz.IDPrefixRTSP)
+	default:
+		if c.IsOnvif() {
+			return uni.UniqueID(bz.IDPrefixOnvifChannel)
+		}
+		return uni.UniqueID(bz.IDPrefixGBChannel)
 	}
-	return uni.UniqueID(bz.IDPrefixGBChannel)
 }
 
 func NewAdapter(store Storer, uni uniqueid.Core) Adapter {

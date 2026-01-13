@@ -1,46 +1,46 @@
 package api
 
 import (
+	"context"
 	"log/slog"
 	"net/url"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gowvp/owl/internal/conf"
-	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/gowvp/owl/internal/core/ipc"
-	"github.com/gowvp/owl/internal/core/push"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/gbs"
+	"github.com/ixugo/goddd/pkg/hook"
+	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/web"
 )
 
 type WebHookAPI struct {
-	smsCore     sms.Core
-	mediaCore   push.Core
-	gb28181Core ipc.Core
-	conf        *conf.Bootstrap
-	log         *slog.Logger
-	gbs         *gbs.Server
-	uc          *Usecase
+	smsCore sms.Core
+	ipcCore ipc.Core
+	conf    *conf.Bootstrap
+	log     *slog.Logger
+	gbs     *gbs.Server
+	uc      *Usecase
 
 	protocols map[string]ipc.Protocoler
 }
 
-func NewWebHookAPI(core sms.Core, mediaCore push.Core, conf *conf.Bootstrap, gbs *gbs.Server, gb28181 ipc.Core, protocols map[string]ipc.Protocoler) WebHookAPI {
+func NewWebHookAPI(core sms.Core, conf *conf.Bootstrap, gbs *gbs.Server, ipcCore ipc.Core, protocols map[string]ipc.Protocoler) WebHookAPI {
 	return WebHookAPI{
-		smsCore:     core,
-		mediaCore:   mediaCore,
-		conf:        conf,
-		log:         slog.With("hook", "zlm"),
-		gbs:         gbs,
-		gb28181Core: gb28181,
-		protocols:   protocols,
+		smsCore:   core,
+		ipcCore:   ipcCore,
+		conf:      conf,
+		log:       slog.With("hook", "zlm"),
+		gbs:       gbs,
+		protocols: protocols,
 	}
 }
 
 func registerZLMWebhookAPI(r gin.IRouter, api WebHookAPI, handler ...gin.HandlerFunc) {
 	{
 		group := r.Group("/webhook", handler...)
+		group.POST("/on_server_started", web.WrapH(api.onServerStarted))
 		group.POST("/on_server_keepalive", web.WrapH(api.onServerKeepalive))
 		group.POST("/on_stream_changed", web.WrapH(api.onStreamChanged))
 		group.POST("/on_publish", web.WrapH(api.onPublish))
@@ -49,6 +49,16 @@ func registerZLMWebhookAPI(r gin.IRouter, api WebHookAPI, handler ...gin.Handler
 		group.POST("/on_rtp_server_timeout", web.WrapH(api.onRTPServerTimeout))
 		group.POST("/on_stream_not_found", web.WrapH(api.onStreamNotFound))
 	}
+}
+
+func (w WebHookAPI) onServerStarted(c *gin.Context, _ *struct{}) (DefaultOutput, error) {
+	w.log.InfoContext(c.Request.Context(), "webhook onServerStarted")
+	// 所有 rtmp 通道离线
+	if err := w.ipcCore.BatchOfflineRTMP(context.Background()); err != nil {
+		w.log.ErrorContext(c.Request.Context(), "webhook onServerStarted", "err", err)
+	}
+
+	return newDefaultOutputOK(), nil
 }
 
 // onServerKeepalive 服务器定时上报时间，上报间隔可配置，默认 10s 上报一次
@@ -68,16 +78,31 @@ func (w WebHookAPI) onPublish(c *gin.Context, in *onPublishInput) (*onPublishOut
 		if err != nil {
 			return &onPublishOutput{DefaultOutput: DefaultOutput{Code: 1, Msg: err.Error()}}, nil
 		}
-		sign := params.Get("sign")
-		if err := w.mediaCore.Publish(c.Request.Context(), push.PublishInput{
-			App:           in.App,
-			Stream:        in.Stream,
-			MediaServerID: in.MediaServerID,
-			Sign:          sign,
-			Secret:        w.conf.Server.RTMPSecret,
-			Session:       params.Get("session"),
-		}); err != nil {
-			return &onPublishOutput{DefaultOutput: DefaultOutput{Code: 1, Msg: err.Error()}}, nil
+
+		// 查找对应的通道
+		ch, err := w.ipcCore.GetChannelByAppStream(c.Request.Context(), in.App, in.Stream)
+		if err != nil {
+			return &onPublishOutput{DefaultOutput: DefaultOutput{Code: 1, Msg: "通道不存在"}}, nil
+		}
+
+		// 验证推流鉴权
+		if !ch.Config.IsAuthDisabled {
+			sign := params.Get("sign")
+			expectedSign := hook.MD5(w.conf.Server.RTMPSecret)
+			if sign != expectedSign {
+				return &onPublishOutput{DefaultOutput: DefaultOutput{Code: 1, Msg: "鉴权失败"}}, nil
+			}
+		}
+
+		// 更新通道推流状态（使用 IsOnline 表示在线/推流中）
+		now := orm.Now()
+		_, err = w.ipcCore.EditChannelConfigAndOnline(c.Request.Context(), ch.ID, true, func(cfg *ipc.StreamConfig) {
+			cfg.PushedAt = &now
+			cfg.MediaServerID = in.MediaServerID
+			cfg.Session = params.Get("session")
+		})
+		if err != nil {
+			w.log.ErrorContext(c.Request.Context(), "更新通道状态失败", "err", err)
 		}
 	}
 	return &onPublishOutput{
@@ -93,14 +118,21 @@ func (w WebHookAPI) onStreamChanged(c *gin.Context, in *onStreamChangedInput) (D
 		return newDefaultOutputOK(), nil
 	}
 
-	// TODO: 待重构
-	if bz.IsRTMP(in.Stream) {
-		if err := w.mediaCore.UnPublish(c.Request.Context(), in.App, in.Stream); err != nil {
-			w.log.ErrorContext(c.Request.Context(), "webhook onStreamChanged", "err", err)
+	// rtmp 流注销的处理
+	// rtmp 可以自定义 stream，所以无法分辨类型，必须检索数据库才知道
+	ch, err := w.ipcCore.GetChannelByAppStream(c.Request.Context(), in.App, in.Stream)
+	if err == nil && ch.IsRTMP() {
+		now := orm.Now()
+		_, err := w.ipcCore.EditChannelConfigAndOnlineByAppStream(c.Request.Context(), in.App, in.Stream, false, func(cfg *ipc.StreamConfig) {
+			cfg.StoppedAt = &now
+		})
+		if err != nil {
+			w.log.ErrorContext(c.Request.Context(), "更新通道停流状态失败", "err", err)
 		}
 		return newDefaultOutputOK(), nil
 	}
 
+	// 其它
 	r := ipc.GetType(in.Stream)
 	protocol, ok := w.protocols[r]
 	if ok {
@@ -116,26 +148,28 @@ func (w WebHookAPI) onStreamChanged(c *gin.Context, in *onStreamChangedInput) (D
 // 播放rtsp流时，如果该流开启了rtsp专用认证（on_rtsp_realm），则不会触发on_play事件。
 // https://docs.zlmediakit.com/guide/media_server/web_hook_api.html#_6-on-play
 func (w WebHookAPI) onPlay(c *gin.Context, in *onPublishInput) (DefaultOutput, error) {
+	// TODO: rtmp 更新播放状态
+
 	return newDefaultOutputOK(), nil
 
-	switch in.Schema {
-	case "rtmp":
-		params, err := url.ParseQuery(in.Params)
-		if err != nil {
-			w.log.InfoContext(c.Request.Context(), "webhook onPlay", "err", err)
-			return DefaultOutput{Code: 1, Msg: err.Error()}, nil
-		}
-		session := params.Get("session")
-		if err := w.mediaCore.OnPlay(c.Request.Context(), push.OnPlayInput{
-			App:     in.App,
-			Stream:  in.Stream,
-			Session: session,
-		}); err != nil {
-			w.log.InfoContext(c.Request.Context(), "webhook onPlay", "err", err)
-			return DefaultOutput{Code: 1, Msg: err.Error()}, nil
-		}
-	case "rtsp":
-	}
+	// switch in.Schema {
+	// case "rtmp":
+	// 	params, err := url.ParseQuery(in.Params)
+	// 	if err != nil {
+	// 		w.log.InfoContext(c.Request.Context(), "webhook onPlay", "err", err)
+	// 		return DefaultOutput{Code: 1, Msg: err.Error()}, nil
+	// 	}
+	// 	session := params.Get("session")
+	// 	if err := w.mediaCore.OnPlay(c.Request.Context(), push.OnPlayInput{
+	// 		App:     in.App,
+	// 		Stream:  in.Stream,
+	// 		Session: session,
+	// 	}); err != nil {
+	// 		w.log.InfoContext(c.Request.Context(), "webhook onPlay", "err", err)
+	// 		return DefaultOutput{Code: 1, Msg: err.Error()}, nil
+	// 	}
+	// case "rtsp":
+	// }
 
 	return newDefaultOutputOK(), nil
 }

@@ -38,7 +38,7 @@ func Run(bc *conf.Bootstrap) {
 	}
 
 	// 如果需要执行表迁移，递增此版本号和表更新说明
-	versionapi.DBVersion = "0.0.19"
+	versionapi.DBVersion = "0.0.20"
 	versionapi.DBRemark = "onvif device support"
 
 	handler, cleanUp, err := wireApp(bc, log)

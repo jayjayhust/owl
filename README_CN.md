@@ -180,7 +180,7 @@ services:
     # registry.cn-shanghai.aliyuncs.com/ixugo/homenvr:latest
     image: gospace/gowvp:latest
     restart: unless-stopped
-    # linux 解开下行注释，并将 ports 全部注释
+    # network_mode 和 ports 二选一
     # network_mode: host
     ports:
       # gb28181
@@ -193,7 +193,7 @@ services:
       - 8080:80 # http
       - 8443:443 # https
       - 10000:10000
-      - 8000:8000/udp
+      - 8000:8000/udp # webrtc
       - 9000:9000/udp
       - 20000-20100:20000-20100 # gb28181 收流端口
       - 20000-20100:20000-20100/udp # gb28181 收流端口udp

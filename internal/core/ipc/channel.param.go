@@ -8,9 +8,10 @@ type FindChannelInput struct {
 	DID      string `form:"did"`       // 设备 id
 	DeviceID string `form:"device_id"` // 国标编码
 	Key      string `form:"key"`       // 名称/国标编码 模糊搜索，id 精确搜索
-	// Name     string    `form:"name"`      // 通道名称
-	// PTZType  int       `form:"ptztype"`   // 云台类型
 	IsOnline string `form:"is_online"` // 是否在线
+	Type     string `form:"type"`      // 通道类型 (GB28181/ONVIF/RTMP/RTSP)
+	App      string `form:"app"`       // 应用名
+	Stream   string `form:"stream"`    // 流 ID
 }
 
 type EditChannelInput struct {
@@ -19,14 +20,24 @@ type EditChannelInput struct {
 	PTZType  int       `json:"ptztype"`   // 云台类型
 	IsOnline bool      `json:"is_online"` // 是否在线
 	Ext      DeviceExt `json:"ext"`
+
+	// RTMP/RTSP 配置
+	App    string       `json:"app"`    // 应用名
+	Stream string       `json:"stream"` // 流 ID
+	Config StreamConfig `json:"config"` // 流配置
 }
 
+// AddChannelInput 添加通道请求参数，支持 RTMP/RTSP 类型
 type AddChannelInput struct {
-	DeviceID string    `json:"device_id"` // 国标编码
-	Name     string    `json:"name"`      // 通道名称
-	PTZType  int       `json:"ptztype"`   // 云台类型
-	IsOnline bool      `json:"is_online"` // 是否在线
-	Ext      DeviceExt `json:"ext"`
+	Type       string `json:"type"`        // 通道类型 (RTMP/RTSP)
+	Name       string `json:"name"`        // 通道名称
+	DeviceID   string `json:"device_id"`   // 可选，关联的父设备 ID
+	DeviceName string `json:"device_name"` // 可选，device_id 不存在时用于创建新设备
+
+	// RTMP/RTSP 配置
+	App    string       `json:"app"`    // 应用名
+	Stream string       `json:"stream"` // 流 ID
+	Config StreamConfig `json:"config"` // 流配置
 }
 
 type AddZoneInput struct {

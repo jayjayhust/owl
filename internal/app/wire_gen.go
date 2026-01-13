@@ -7,13 +7,14 @@
 package app
 
 import (
+	"log/slog"
+	"net/http"
+
 	"github.com/gowvp/owl/internal/conf"
 	"github.com/gowvp/owl/internal/data"
 	"github.com/gowvp/owl/internal/web/api"
 	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/domain/version/versionapi"
-	"log/slog"
-	"net/http"
 )
 
 // Injectors from wire.go:
@@ -28,17 +29,15 @@ func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error)
 	smsCore := api.NewSMSCore(db, bc)
 	smsAPI := api.NewSmsAPI(smsCore)
 	uniqueidCore := api.NewUniqueID(db)
-	pushCore := api.NewPushCore(db, uniqueidCore)
 	storer := api.NewIPCStore(db)
 	adapter := api.NewGBAdapter(storer, uniqueidCore)
 	server, cleanup := gbs.NewServer(bc, adapter, smsCore)
-	proxyCore := api.NewProxyCore(db, uniqueidCore)
-	v := api.NewProtocols(adapter, smsCore, proxyCore, server)
-	ipcCore := api.NewIPCCore(storer, uniqueidCore, v)
-	webHookAPI := api.NewWebHookAPI(smsCore, pushCore, bc, server, ipcCore, v)
-	pushAPI := api.NewPushAPI(pushCore, smsCore, bc)
+	ipcCore := api.NewIPCCore(storer, uniqueidCore, nil) // protocols 会在下面赋值
+	v := api.NewProtocols(adapter, smsCore, ipcCore, server)
+	// 重新初始化 ipcCore 以包含 protocols
+	ipcCore = api.NewIPCCore(storer, uniqueidCore, v)
+	webHookAPI := api.NewWebHookAPI(smsCore, bc, server, ipcCore, v)
 	ipcapi := api.NewIPCAPI(ipcCore)
-	proxyAPI := api.NewProxyAPI(proxyCore)
 	configAPI := api.NewConfigAPI(db, bc)
 	userAPI := api.NewUserAPI(bc)
 	eventCore := api.NewEventCore(db, bc)
@@ -51,9 +50,7 @@ func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error)
 		SMSAPI:       smsAPI,
 		WebHookAPI:   webHookAPI,
 		UniqueID:     uniqueidCore,
-		MediaAPI:     pushAPI,
 		GB28181API:   ipcapi,
-		ProxyAPI:     proxyAPI,
 		ConfigAPI:    configAPI,
 		SipServer:    server,
 		UserAPI:      userAPI,

@@ -57,3 +57,34 @@ type Zone struct {
 	Color       string    `json:"color"`       // 颜色，支持 hex 颜色值，如 #FF0000
 	Labels      []string  `json:"labels"`      // 标签
 }
+
+// StreamConfig 流配置，用于 RTMP 推流和 RTSP 拉流代理
+type StreamConfig struct {
+	// RTMP 推流配置
+	IsAuthDisabled bool      `json:"is_auth_disabled"`    // 是否禁用推流鉴权
+	Session        string    `json:"session,omitempty"`   // 推流鉴权参数（由推流客户端携带）
+	PushedAt       *orm.Time `json:"pushed_at"`           // 最后推流时间
+	StoppedAt      *orm.Time `json:"stopped_at"`          // 最后停止时间
+	MediaServerID  string    `json:"media_server_id"`     // 媒体服务器 ID
+	PushAddr       string    `json:"push_addr,omitempty"` // 推流地址（动态生成，不持久化）
+
+	// RTSP 拉流配置
+	SourceURL                 string `json:"source_url"`                   // 原始 URL
+	Transport                 int    `json:"transport"`                    // 拉流方式 (0:tcp, 1:udp)
+	TimeoutS                  int    `json:"timeout_s"`                    // 超时时间
+	EnabledAudio              bool   `json:"enabled_audio"`                // 是否启用音频
+	EnabledRemoveNoneReader   bool   `json:"enabled_remove_none_reader"`   // 无人观看时删除
+	EnabledDisabledNoneReader bool   `json:"enabled_disabled_none_reader"` // 无人观看时禁用
+	StreamKey                 string `json:"stream_key"`                   // ZLM 返回的 key
+	Enabled                   bool   `json:"enabled"`                      // 是否启用
+}
+
+// Scan implements orm.Scanner
+func (s *StreamConfig) Scan(input any) error {
+	return orm.JSONUnmarshal(input, s)
+}
+
+// Value implements driver.Valuer
+func (s StreamConfig) Value() (driver.Value, error) {
+	return json.Marshal(s)
+}

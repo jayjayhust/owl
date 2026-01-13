@@ -31,7 +31,11 @@ func SetupDB(c *conf.Bootstrap) (*gorm.DB, error) {
 		ConnMaxLifetime: cfg.ConnMaxLifetime.Duration(),
 		SlowThreshold:   cfg.SlowThreshold.Duration(),
 	})
-	return db, err
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
 
 // getDialector 返回 dial 和 是否 sqlite

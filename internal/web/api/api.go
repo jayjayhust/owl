@@ -33,6 +33,7 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 	uc.GB28181API.uc = uc
 	uc.SMSAPI.uc = uc
 	uc.WebHookAPI.uc = uc
+	// uc.MediaAPI.uc = uc // 已移除 push 模块
 	const staticPrefix = "/web"
 
 	go stat.LoadTop(system.Getwd(), func(m map[string]any) {
@@ -102,10 +103,7 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 	versionapi.Register(r, uc.Version, auth)
 	statapi.Register(r)
 	registerZLMWebhookAPI(r, uc.WebHookAPI)
-
-	registerPushAPI(r, uc.MediaAPI, auth)
 	registerGB28181(r, uc.GB28181API, auth)
-	registerProxy(r, uc.ProxyAPI, auth)
 	uc.ConfigAPI.uc = uc
 	registerConfig(r, uc.ConfigAPI, auth)
 	registerSms(r, uc.SMSAPI, auth)

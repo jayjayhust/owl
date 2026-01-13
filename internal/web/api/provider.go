@@ -1,6 +1,7 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -13,13 +14,13 @@ import (
 	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/gowvp/owl/internal/core/ipc/store/ipccache"
 	"github.com/gowvp/owl/internal/core/ipc/store/ipcdb"
-	"github.com/gowvp/owl/internal/core/proxy"
-	"github.com/gowvp/owl/internal/core/push"
-	"github.com/gowvp/owl/internal/core/push/store/pushdb"
 	"github.com/gowvp/owl/internal/core/sms"
+	"github.com/gowvp/owl/internal/data"
 	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/domain/uniqueid"
 	"github.com/ixugo/goddd/domain/uniqueid/store/uniqueiddb"
+	"github.com/ixugo/goddd/domain/version"
+	"github.com/ixugo/goddd/domain/version/store/versiondb"
 	"github.com/ixugo/goddd/domain/version/versionapi"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/web"
@@ -35,10 +36,8 @@ var (
 		NewSMSCore, NewSmsAPI,
 		NewWebHookAPI,
 		NewUniqueID,
-		NewPushCore, NewPushAPI,
 		gbs.NewServer,
 		NewIPCStore, NewProtocols, NewIPCCore, NewIPCAPI, NewGBAdapter,
-		NewProxyAPI, NewProxyCore,
 		NewConfigAPI,
 		NewUserAPI,
 		NewAIWebhookAPIWithDeps,
@@ -53,9 +52,7 @@ type Usecase struct {
 	SMSAPI     SmsAPI
 	WebHookAPI WebHookAPI
 	UniqueID   uniqueid.Core
-	MediaAPI   PushAPI
 	GB28181API IPCAPI
-	ProxyAPI   ProxyAPI
 	ConfigAPI  ConfigAPI
 
 	SipServer    *gbs.Server
@@ -93,12 +90,46 @@ func NewUniqueID(db *gorm.DB) uniqueid.Core {
 	return uniqueid.NewCore(uniqueiddb.NewDB(db).AutoMigrate(orm.GetEnabledAutoMigrate()), 5)
 }
 
-func NewPushCore(db *gorm.DB, uni uniqueid.Core) push.Core {
-	return push.NewCore(pushdb.NewDB(db).AutoMigrate(orm.GetEnabledAutoMigrate()), uni)
-}
+// 需要迁移的版本阈值
+const migrateVersionThreshold = "0.0.20"
 
 func NewIPCStore(db *gorm.DB) ipc.Storer {
-	return ipccache.NewCache(ipcdb.NewDB(db).AutoMigrate(orm.GetEnabledAutoMigrate()))
+	store := ipccache.NewCache(ipcdb.NewDB(db).AutoMigrate(orm.GetEnabledAutoMigrate()))
+
+	// 检查版本并执行 RTMP/RTSP 数据迁移到 channels 表
+	if shouldMigrateStreamData(db) {
+		slog.Info("检测到需要迁移 stream_push/stream_proxy 数据到 channels 表")
+		uni := uniqueid.NewCore(uniqueiddb.NewDB(db), 5)
+		if err := data.MigrateStreamData(db, uni); err != nil {
+			slog.Error("数据迁移失败", "err", err)
+			// 迁移失败不阻止程序启动，只记录错误
+		}
+	}
+
+	return store
+}
+
+// shouldMigrateStreamData 检查是否需要迁移 stream_push/stream_proxy 数据
+// 当数据库版本 < 0.0.20 且存在旧表时需要迁移
+func shouldMigrateStreamData(db *gorm.DB) bool {
+	// 检查是否存在旧表
+	hasStreamPushs := db.Migrator().HasTable("stream_pushs")
+	hasStreamProxys := db.Migrator().HasTable("stream_proxys")
+	if !hasStreamPushs && !hasStreamProxys {
+		return false
+	}
+
+	// 检查版本号
+	vdb := versiondb.NewDB(db)
+	var ver version.Version
+	if err := vdb.First(&ver); err != nil {
+		// 版本表不存在或为空，需要迁移
+		slog.Debug("版本表不存在或为空，需要迁移")
+		return true
+	}
+
+	// 比较版本号，< 0.0.20 需要迁移
+	return compareVersion(ver.Version, migrateVersionThreshold) < 0
 }
 
 func NewGBAdapter(store ipc.Storer, uni uniqueid.Core) ipc.Adapter {
@@ -109,10 +140,10 @@ func NewGBAdapter(store ipc.Storer, uni uniqueid.Core) ipc.Adapter {
 }
 
 // NewProtocols 创建协议适配器映射
-func NewProtocols(adapter ipc.Adapter, sms sms.Core, proxyCore *proxy.Core, gbs *gbs.Server) map[string]ipc.Protocoler {
+func NewProtocols(adapter ipc.Adapter, sms sms.Core, ipcCore ipc.Core, gbs *gbs.Server) map[string]ipc.Protocoler {
 	protocols := make(map[string]ipc.Protocoler)
 	protocols[ipc.TypeOnvif] = onvifadapter.NewAdapter(adapter, sms)
-	protocols[ipc.TypeRTSP] = rtspadapter.NewAdapter(proxyCore, sms)
+	protocols[ipc.TypeRTSP] = rtspadapter.NewAdapter(ipcCore, sms)
 	protocols[ipc.TypeGB28181] = gbadapter.NewAdapter(adapter, gbs, sms)
 	return protocols
 }
