@@ -34,7 +34,6 @@ tables/
 *.tar
 *.zip
 .idea/
-data/
 cover/
 *.pprof
 *.go.yaml

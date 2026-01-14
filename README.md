@@ -250,9 +250,7 @@ If you're a Go developer familiar with Docker, you can download the source code 
 
 ## Features
 
-- [x] Out-of-the-box with web interface
-- [x] RTMP stream distribution support
-- [x] RTSP stream distribution support
+- [x] Out-of-the-box with responsive web management
 - [x] Multiple protocol output: HTTP_FLV, Websocket_FLV, HLS, WebRTC, RTSP, RTMP
 - [x] LAN/Internet/Multi-layer NAT/Special network environment deployment
 - [x] SQLite database for quick deployment
@@ -275,10 +273,10 @@ If you're a Go developer familiar with Docker, you can download the source code 
   - [x] CORS support
   - [x] Chinese and English language support
   - [x] ONVIF support
-  - [ ] PTZ control
-  - [ ] Recording playback
-  - [ ] Alarm event subscription
-  - [ ] Alarm event notification handling
+  - [x] RTMP push streaming support
+  - [x] RTSP pull streaming support
+  - [x] AI algorithm analysis and alerting support
+  - [ ] Recording playback (in development...)
 
 ## Acknowledgments
 
@@ -287,6 +285,8 @@ Thanks to our sponsors (in no particular order):
 [@joestarzxh](https://github.com/joestarzxh)
 [@oldweipro](https://github.com/oldweipro)
 [@beixiaocai](https://github.com/beixiaocai)
+[@chencanfggz](https://github.com/chencanfggz)
+[@zhangxuan1340](https://github.com/zhangxuan1340)
 
 ## License
 

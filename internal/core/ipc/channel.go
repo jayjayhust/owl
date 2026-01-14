@@ -121,8 +121,10 @@ func (c *Core) AddChannel(ctx context.Context, in *AddChannelInput) (*Channel, e
 	} else if in.DeviceName != "" {
 		// 没有 device_id，但有 device_name，创建新设备
 		newDev := Device{
-			Name: in.DeviceName,
-			Type: in.Type,
+			Name:     in.DeviceName,
+			Type:     in.Type,
+			IsOnline: true,
+			Channels: 1,
 		}
 		newDev.ID = c.uniqueID.UniqueID(getDevicePrefix(in.Type))
 		newDev.DeviceID = newDev.ID
