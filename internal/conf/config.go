@@ -22,8 +22,23 @@ type Server struct {
 	Username string `comment:"登录用户名"`
 	Password string `comment:"登录密码"`
 
-	AI   ServerAI   `comment:"ai 分析服务"`
-	HTTP ServerHTTP `comment:"对外提供的服务，建议由 nginx 代理"` // HTTP服务器
+	AI        ServerAI        `comment:"ai 分析服务"`
+	HTTP      ServerHTTP      `comment:"对外提供的服务，建议由 nginx 代理"` // HTTP服务器
+	Recording ServerRecording `comment:"录像配置"`
+}
+
+// ServerRecording 录像配置，控制流媒体录制行为和存储策略
+// 默认所有录制均开启，通过 Disabled 字段关闭特定类型的录制
+type ServerRecording struct {
+	Disabled           bool    `comment:"是否禁用录制（全局开关，true=禁用）"`
+	StorageDir         string  `comment:"录像存储根目录（相对于工作目录）"`
+	RetainDays         int     `comment:"录像保留天数（超过则清理）"`
+	DiskUsageThreshold float64 `comment:"磁盘使用率阈值（百分比），超过则触发循环覆盖"`
+	SegmentSeconds     int     `comment:"MP4 切片时长（秒）"`
+	DisabledGB28181    bool    `comment:"是否禁用 GB28181 通道录制（true=禁用）"`
+	DisabledRTMP       bool    `comment:"是否禁用 RTMP 通道录制（true=禁用）"`
+	DisabledRTSP       bool    `comment:"是否禁用 RTSP 通道录制（true=禁用）"`
+	DisabledONVIF      bool    `comment:"是否禁用 ONVIF 通道录制（true=禁用）"`
 }
 
 type ServerAI struct {

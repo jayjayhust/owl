@@ -2,6 +2,7 @@ package rtspadapter
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/gowvp/owl/internal/core/sms"
@@ -9,6 +10,8 @@ import (
 
 var _ ipc.Protocoler = (*Adapter)(nil)
 
+// Adapter RTSP 协议适配器
+// 处理 RTSP 拉流的状态管理
 type Adapter struct {
 	ipcCore ipc.Core
 	smsCore sms.Core
@@ -28,11 +31,16 @@ func NewAdapter(ipcCore ipc.Core, smsCore sms.Core) *Adapter {
 
 // InitDevice implements ipc.Protocoler.
 func (a *Adapter) InitDevice(ctx context.Context, device *ipc.Device) error {
-	panic("unimplemented")
+	return nil
 }
 
 // OnStreamChanged implements ipc.Protocoler.
+// RTSP 拉流断开时更新通道状态（IsOnline=false, IsPlaying=false）
 func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
+	// stream 就是 channel.ID，直接更新状态
+	if _, err := a.ipcCore.EditChannelOnlineAndPlaying(ctx, stream, false, false); err != nil {
+		slog.WarnContext(ctx, "更新 RTSP 通道状态失败", "stream", stream, "err", err)
+	}
 	return nil
 }
 
@@ -68,20 +76,20 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream strin
 
 // QueryCatalog implements ipc.Protocoler.
 func (a *Adapter) QueryCatalog(ctx context.Context, device *ipc.Device) error {
-	panic("unimplemented")
+	return nil
 }
 
 // StartPlay implements ipc.Protocoler.
 func (a *Adapter) StartPlay(ctx context.Context, device *ipc.Device, channel *ipc.Channel) (*ipc.PlayResponse, error) {
-	panic("unimplemented")
+	return nil, nil
 }
 
 // StopPlay implements ipc.Protocoler.
 func (a *Adapter) StopPlay(ctx context.Context, device *ipc.Device, channel *ipc.Channel) error {
-	panic("unimplemented")
+	return nil
 }
 
 // ValidateDevice implements ipc.Protocoler.
 func (a *Adapter) ValidateDevice(ctx context.Context, device *ipc.Device) error {
-	panic("unimplemented")
+	return nil
 }

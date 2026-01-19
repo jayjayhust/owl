@@ -221,3 +221,19 @@ type onStreamNotFoundInput struct {
 	AppName    string `json:"app_name"`    // 流应用名
 	StreamName string `json:"stream_name"` // 流名称
 }
+
+// onRecordMP4Input 录制 mp4 完成后通知事件参数
+// https://docs.zlmediakit.com/zh/guide/media_server/web_hook_api.html#_8%E3%80%81on-record-mp4
+type onRecordMP4Input struct {
+	MediaServerID string  `json:"mediaServerId"` // 服务器 id
+	App           string  `json:"app"`           // 录制的流应用名
+	FileName      string  `json:"file_name"`     // 文件名
+	FilePath      string  `json:"file_path"`     // 文件绝对路径
+	FileSize      int64   `json:"file_size"`     // 文件大小，单位字节
+	Folder        string  `json:"folder"`        // 文件所在目录路径
+	StartTime     int64   `json:"start_time"`    // 开始录制时间戳（秒）
+	Stream        string  `json:"stream"`        // 录制的流 ID
+	TimeLen       float64 `json:"time_len"`      // 录制时长，单位秒
+	URL           string  `json:"url"`           // http/rtsp/rtmp 点播相对 url 路径
+	Vhost         string  `json:"vhost"`         // 流虚拟主机
+}

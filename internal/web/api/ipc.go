@@ -19,9 +19,9 @@ import (
 	"github.com/gowvp/owl/internal/adapter/onvifadapter"
 	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/recording"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/zlm"
-	"github.com/ixugo/goddd/domain/uniqueid"
 	"github.com/ixugo/goddd/pkg/hook"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"
@@ -53,16 +53,13 @@ func readCover(dataDir, channelID string) ([]byte, error) {
 }
 
 type IPCAPI struct {
-	ipc ipc.Core
-	uc  *Usecase
+	ipc           ipc.Core
+	uc            *Usecase
+	recordingCore recording.Core
 }
 
-func NewIPCAPI(core ipc.Core) IPCAPI {
-	return IPCAPI{ipc: core}
-}
-
-func NewIPCCore(store ipc.Storer, uni uniqueid.Core, protocols map[string]ipc.Protocoler) ipc.Core {
-	return ipc.NewCore(store, uni, protocols)
+func NewIPCAPI(bundle IPCBundle, recordingCore recording.Core) IPCAPI {
+	return IPCAPI{ipc: bundle.Core, recordingCore: recordingCore}
 }
 
 func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
@@ -165,7 +162,26 @@ func (a IPCAPI) queryCatalog(c *gin.Context, _ *struct{}) (any, error) {
 }
 
 func (a IPCAPI) FindChannelsForDevice(c *gin.Context, in *ipc.FindDeviceInput) (any, error) {
-	items, total, err := a.ipc.FindChannelsForDevice(c.Request.Context(), in)
+	ctx := c.Request.Context()
+	items, total, err := a.ipc.FindChannelsForDevice(ctx, in)
+
+	// 收集所有通道 ID 用于批量查询录像
+	var cids []string
+	for _, dev := range items {
+		for _, ch := range dev.Children {
+			cids = append(cids, ch.ID)
+		}
+	}
+
+	// 批量查询哪些通道有录像
+	hasRecordingMap, _ := a.recordingCore.HasRecordings(ctx, cids)
+
+	// 为每个通道设置 has_recording 标记
+	for _, dev := range items {
+		for _, ch := range dev.Children {
+			ch.HasRecording = hasRecordingMap[ch.ID]
+		}
+	}
 
 	// 按照在线优先排序
 	sort.SliceStable(items, func(i, j int) bool {

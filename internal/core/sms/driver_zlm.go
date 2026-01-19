@@ -25,8 +25,8 @@ func (d *ZLMDriver) GetStreamLiveAddr(ctx context.Context, ms *MediaServer, http
 	out.HLS = fmt.Sprintf("%s/proxy/sms/%s/%s/hls.fmp4.m3u8", httpPrefix, app, stream)
 	rtcPrefix := strings.Replace(strings.Replace(httpPrefix, "https", "webrtc", 1), "http", "webrtc", 1)
 	out.WebRTC = fmt.Sprintf("%s/proxy/sms/index/api/webrtc?app=%s&stream=%s&type=play", rtcPrefix, app, stream)
-	out.RTMP = fmt.Sprintf("rtmp://%s:%d/%s", host, ms.Ports.RTMP, stream)
-	out.RTSP = fmt.Sprintf("rtsp://%s:%d/%s", host, ms.Ports.RTSP, stream)
+	out.RTMP = fmt.Sprintf("rtmp://%s:%d/%s/%s", host, ms.Ports.RTMP, app, stream)
+	out.RTSP = fmt.Sprintf("rtsp://%s:%d/%s/%s", host, ms.Ports.RTSP, app, stream)
 	return out
 }
 
@@ -108,6 +108,7 @@ func (d *ZLMDriver) Setup(ctx context.Context, ms *MediaServer, webhookURL strin
 		GeneralStreamNoneReaderDelayMS: new("30000"),
 		HookOnStreamNotFound:           new(fmt.Sprintf("%s/on_stream_not_found", webhookURL)),
 		HookOnRecordTs:                 new(""),
+		HookOnRecordMp4:                new(fmt.Sprintf("%s/on_record_mp4", webhookURL)),
 		HookOnRtspAuth:                 new(""),
 		HookOnRtspRealm:                new(""),
 		HookOnShellLogin:               new(""),
@@ -119,6 +120,12 @@ func (d *ZLMDriver) Setup(ctx context.Context, ms *MediaServer, webhookURL strin
 		ProtocolContinuePushMs:         new("3000"),
 		RtpProxyPortRange:              &ms.RTPPortRange,
 		FfmpegLog:                      new("./fflogs/ffmpeg.log"),
+
+		// 录像配置
+		// 移除默认的 "record" 目录层级，简化路径结构
+		RecordAppName:    new(""),
+		RecordFastStart:  new("1"), // moov 写在开头，便于流式播放
+		RecordEnableFmp4: new("0"), // 启用 fMP4 格式，HLS.js 可直接播放
 	}
 
 	resp, err := engine.SetServerConfig(&req)
@@ -169,4 +176,16 @@ func (d *ZLMDriver) AddStreamProxy(ctx context.Context, ms *MediaServer, req *Ad
 func (d *ZLMDriver) GetSnapshot(ctx context.Context, ms *MediaServer, req *GetSnapRequest) ([]byte, error) {
 	engine := d.withConfig(ms)
 	return engine.GetSnap(req.GetSnapRequest)
+}
+
+// StartRecord 开始录制，通知 ZLM 对指定流进行 MP4 录制
+func (d *ZLMDriver) StartRecord(ctx context.Context, ms *MediaServer, req *zlm.StartRecordRequest) (*zlm.StartRecordResponse, error) {
+	engine := d.withConfig(ms)
+	return engine.StartRecord(*req)
+}
+
+// StopRecord 停止录制
+func (d *ZLMDriver) StopRecord(ctx context.Context, ms *MediaServer, req *zlm.StopRecordRequest) (*zlm.StopRecordResponse, error) {
+	engine := d.withConfig(ms)
+	return engine.StopRecord(*req)
 }

@@ -44,6 +44,14 @@ type Hooker interface {
 	OnStreamChanged(ctx context.Context, stream string) error
 }
 
+// OnPublisher 推流鉴权接口（可选实现）
+// 只有 RTMP 需要实现此接口
+type OnPublisher interface {
+	// OnPublish 处理推流鉴权
+	// 返回 true 表示鉴权通过，false 表示鉴权失败
+	OnPublish(ctx context.Context, stream string, params map[string]string) (bool, error)
+}
+
 // PlayResponse 播放响应
 type PlayResponse struct {
 	SSRC   string // GB28181 SSRC

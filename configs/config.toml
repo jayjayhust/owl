@@ -29,6 +29,27 @@
       # 访问白名单
       AccessIps = ['::1', '127.0.0.1']
 
+  # 录像配置
+  [Server.Recording]
+    # 是否禁用录制（全局开关，true=禁用）
+    Disabled = false
+    # 录像存储根目录（相对于工作目录）
+    StorageDir = './configs/recordings'
+    # 录像保留天数（超过则清理）
+    RetainDays = 7
+    # 磁盘使用率阈值（百分比），超过则触发循环覆盖
+    DiskUsageThreshold = 99.0
+    # MP4 切片时长（秒）
+    SegmentSeconds = 60
+    # 是否禁用 GB28181 通道录制（true=禁用）
+    DisabledGB28181 = false
+    # 是否禁用 RTMP 通道录制（true=禁用）
+    DisabledRTMP = false
+    # 是否禁用 RTSP 通道录制（true=禁用）
+    DisabledRTSP = false
+    # 是否禁用 ONVIF 通道录制（true=禁用）
+    DisabledONVIF = false
+
 [Data]
   # 数据库支持 sqlite/postgres/mysql, 使用 sqlite 时 dsn 应当填写文件存储路径
   # postgres://postgres:123456@127.0.0.1:5432/gb28181?sslmode=disable

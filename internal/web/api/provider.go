@@ -8,12 +8,15 @@ import (
 	"github.com/google/wire"
 	"github.com/gowvp/owl/internal/adapter/gbadapter"
 	"github.com/gowvp/owl/internal/adapter/onvifadapter"
+	"github.com/gowvp/owl/internal/adapter/rtmpadapter"
 	"github.com/gowvp/owl/internal/adapter/rtspadapter"
 	"github.com/gowvp/owl/internal/conf"
 	"github.com/gowvp/owl/internal/core/event"
 	"github.com/gowvp/owl/internal/core/ipc"
 	"github.com/gowvp/owl/internal/core/ipc/store/ipccache"
 	"github.com/gowvp/owl/internal/core/ipc/store/ipcdb"
+	"github.com/gowvp/owl/internal/core/recording"
+	"github.com/gowvp/owl/internal/core/recording/adapter"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/internal/data"
 	"github.com/gowvp/owl/pkg/gbs"
@@ -37,11 +40,15 @@ var (
 		NewWebHookAPI,
 		NewUniqueID,
 		gbs.NewServer,
-		NewIPCStore, NewProtocols, NewIPCCore, NewIPCAPI, NewGBAdapter,
+		NewIPCStore, NewGBAdapter,
+		NewIPCCoreWithProtocols,
+		NewIPCAPI,
 		NewConfigAPI,
 		NewUserAPI,
 		NewAIWebhookAPIWithDeps,
 		NewEventCore, NewEventAPI,
+		// Recording: Store -> SMSProvider(adapter) -> Core -> API
+		NewRecordingStore, NewSMSProviderAdapter, NewRecordingCore, NewRecordingAPI,
 	)
 )
 
@@ -60,6 +67,8 @@ type Usecase struct {
 	AIWebhookAPI AIWebhookAPI
 
 	EventAPI EventAPI
+
+	RecordingAPI RecordingAPI
 }
 
 // NewHTTPHandler 生成Gin框架路由内容
@@ -139,16 +148,41 @@ func NewGBAdapter(store ipc.Storer, uni uniqueid.Core) ipc.Adapter {
 	)
 }
 
-// NewProtocols 创建协议适配器映射
-func NewProtocols(adapter ipc.Adapter, sms sms.Core, ipcCore ipc.Core, gbs *gbs.Server) map[string]ipc.Protocoler {
+// IPCBundle 包含 ipc.Core 和 Protocols，用于解决循环依赖
+type IPCBundle struct {
+	Core      ipc.Core
+	Protocols map[string]ipc.Protocoler
+}
+
+// NewIPCCoreWithProtocols 创建 IPC Core 和 Protocols
+// 通过在函数内部分两步创建来解决：先创建不含 protocols 的 Core，再创建 Protocols，最后注入
+func NewIPCCoreWithProtocols(store ipc.Storer, uni uniqueid.Core, adapter ipc.Adapter, smsCore sms.Core, gbsServer *gbs.Server, conf *conf.Bootstrap) IPCBundle {
+	// 第一步：创建不含 protocols 的 ipc.Core
+	ipcCore := ipc.NewCore(store, uni, nil)
+
+	// 第二步：创建 protocols（需要 ipc.Core）
 	protocols := make(map[string]ipc.Protocoler)
-	protocols[ipc.TypeOnvif] = onvifadapter.NewAdapter(adapter, sms)
-	protocols[ipc.TypeRTSP] = rtspadapter.NewAdapter(ipcCore, sms)
-	protocols[ipc.TypeGB28181] = gbadapter.NewAdapter(adapter, gbs, sms)
-	return protocols
+	protocols[ipc.TypeOnvif] = onvifadapter.NewAdapter(adapter, smsCore)
+	protocols[ipc.TypeRTSP] = rtspadapter.NewAdapter(ipcCore, smsCore)
+	protocols[ipc.TypeRTMP] = rtmpadapter.NewAdapter(ipcCore, conf)
+	protocols[ipc.TypeGB28181] = gbadapter.NewAdapter(adapter, gbsServer, smsCore)
+
+	// 第三步：将 protocols 注入到 ipc.Core
+	ipcCore.SetProtocols(protocols)
+
+	return IPCBundle{
+		Core:      ipcCore,
+		Protocols: protocols,
+	}
 }
 
 // NewAIWebhookAPIWithDeps 创建带依赖的 AI Webhook API
-func NewAIWebhookAPIWithDeps(conf *conf.Bootstrap, eventCore event.Core, ipcCore ipc.Core) AIWebhookAPI {
-	return NewAIWebhookAPI(conf, eventCore, ipcCore)
+func NewAIWebhookAPIWithDeps(conf *conf.Bootstrap, eventCore event.Core, ipcBundle IPCBundle) AIWebhookAPI {
+	return NewAIWebhookAPI(conf, eventCore, ipcBundle.Core)
+}
+
+// NewSMSProviderAdapter 创建 SMS 适配器，将 sms.Core 适配为 recording.SMSProvider
+// 通过接口解耦 recording 领域与 sms 领域，避免循环依赖
+func NewSMSProviderAdapter(smsCore sms.Core) recording.SMSProvider {
+	return adapter.NewSMSAdapter(smsCore)
 }

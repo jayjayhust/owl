@@ -188,40 +188,6 @@ services:
       - ./data:/opt/media/bin/configs
 ```
 
-**GoWVP & ZLMediaKit Separate Images (More Complex Deployment)**
-
-```yml
-services:
-  gowvp:
-    image: registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest
-    ports:
-      - 15123:15123 # Management platform HTTP port
-      - 15060:15060 # GB28181 SIP TCP port
-      - 15060:15060/udp # GB28181 SIP UDP port
-    volumes:
-      # - ./logs:/app/logs # Uncomment if you need persistent logs
-      - ./configs:/app/configs
-    depends_on:
-      - zlm
-  zlm:
-    image: zlmediakit/zlmediakit:master
-    restart: always
-    # Recommended: use host mode for Linux
-    # network_mode: host
-    ports:
-      - 1935:1935 # rtmp
-      - 554:554 # rtsp
-      - 8080:80 # api
-      - 8443:443
-      - 10000:10000
-      - 10000:10000/udp
-      - 8000:8000/udp
-      - 9000:9000/udp
-      - 20000-20100:20000-20100
-      - 20000-20100:20000-20100/udp
-    volumes:
-      - ./configs:/opt/media/conf
-```
 
 ## Quick Start
 

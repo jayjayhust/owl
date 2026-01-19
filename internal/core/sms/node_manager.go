@@ -295,3 +295,21 @@ func (n *NodeManager) GetStreamLiveAddr(server *MediaServer, httpPrefix, host, a
 	}
 	return driver.GetStreamLiveAddr(context.Background(), server, httpPrefix, host, app, stream)
 }
+
+// StartRecord 开始录制指定流
+func (n *NodeManager) StartRecord(server *MediaServer, in zlm.StartRecordRequest) (*zlm.StartRecordResponse, error) {
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.StartRecord(context.Background(), server, &in)
+}
+
+// StopRecord 停止录制指定流
+func (n *NodeManager) StopRecord(server *MediaServer, in zlm.StopRecordRequest) (*zlm.StopRecordResponse, error) {
+	driver, err := n.getDriver(server.Type)
+	if err != nil {
+		return nil, err
+	}
+	return driver.StopRecord(context.Background(), server, &in)
+}

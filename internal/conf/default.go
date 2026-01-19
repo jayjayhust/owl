@@ -25,6 +25,17 @@ func DefaultConfig() Bootstrap {
 				Disabled:   false,
 				RetainDays: 7,
 			},
+			Recording: ServerRecording{
+				Disabled:           false,
+				StorageDir:         "./configs/recordings",
+				RetainDays:         3,
+				DiskUsageThreshold: 95.0,
+				SegmentSeconds:     600,
+				DisabledGB28181:    false,
+				DisabledRTMP:       false,
+				DisabledRTSP:       false,
+				DisabledONVIF:      false,
+			},
 		},
 		Data: Data{
 			Database: Database{

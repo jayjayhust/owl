@@ -22,8 +22,8 @@ type EditChannelInput struct {
 	Ext      DeviceExt `json:"ext"`
 
 	// RTMP/RTSP 配置
-	App    string       `json:"app"`    // 应用名
-	Stream string       `json:"stream"` // 流 ID
+	// App    string       `json:"app"`    // 应用名
+	// Stream string       `json:"stream"` // 流 ID
 	Config StreamConfig `json:"config"` // 流配置
 }
 

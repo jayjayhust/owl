@@ -30,3 +30,8 @@ func NewCore(store Storer, uni uniqueid.Core, protocols map[string]Protocoler) C
 func (c *Core) GetProtocol(atype string) Protocoler {
 	return c.protocols[atype]
 }
+
+// SetProtocols 设置协议映射，用于解决循环依赖问题
+func (c *Core) SetProtocols(protocols map[string]Protocoler) {
+	c.protocols = protocols
+}

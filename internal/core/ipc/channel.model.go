@@ -27,6 +27,9 @@ type Channel struct {
 	App    string       `gorm:"column:app;index;notNull;default:'';comment:应用名" json:"app"`        // 应用名 (RTMP/RTSP)
 	Stream string       `gorm:"column:stream;index;notNull;default:'';comment:流 ID" json:"stream"` // 流 ID (RTMP/RTSP)
 	Config StreamConfig `gorm:"column:config;notNull;default:'{}';type:jsonb" json:"config"`       // 流配置 (RTMP/RTSP)
+
+	// 非持久化字段，用于 API 响应
+	HasRecording bool `gorm:"-" json:"has_recording"` // 是否存在录像（查询时动态填充）
 }
 
 // TableName database table name

@@ -31,9 +31,14 @@ func (a *Adapter) InitDevice(ctx context.Context, device *ipc.Device) error {
 }
 
 // OnStreamChanged implements ipc.Protocoler.
+// 流注销时停止播放并更新播放状态（仅在 regist=false 时由 zlm_webhook 调用）
 func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
 	ch, err := a.adapter.GetChannel(ctx, stream)
 	if err != nil {
+		return err
+	}
+	// 更新播放状态为 false
+	if err := a.adapter.EditPlayingByID(ctx, ch.ID, false); err != nil {
 		return err
 	}
 	return a.gbs.StopPlay(ctx, &gbs.StopPlayInput{Channel: ch})
