@@ -20,6 +20,19 @@ import (
 )
 
 func Run(bc *conf.Bootstrap) {
+	if bc.Server.Recording.DiskUsageThreshold <= 0 {
+		bc.Server.Recording.DiskUsageThreshold = 95.0
+	}
+	if bc.Server.Recording.SegmentSeconds <= 0 {
+		bc.Server.Recording.SegmentSeconds = 300
+	}
+	if bc.Server.Recording.RetainDays <= 0 {
+		bc.Server.Recording.RetainDays = 3
+	}
+	if bc.Server.Recording.StorageDir == "" {
+		bc.Server.Recording.StorageDir = "./configs/recordings"
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

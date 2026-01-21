@@ -38,17 +38,22 @@ func (a *Adapter) InitDevice(ctx context.Context, device *ipc.Device) error {
 
 // OnStreamChanged implements ipc.Protocoler.
 // RTMP 推流断开时更新通道状态（IsOnline=false, IsPlaying=false）
-func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
+func (a *Adapter) OnStreamChanged(ctx context.Context, app, stream string) error {
 	now := orm.Now()
-	// stream 就是 channel.ID，直接查询
-	_, err := a.ipcCore.EditChannelConfigAndOnline(ctx, stream, false, func(cfg *ipc.StreamConfig) {
+	// 通过 app+stream 查询通道，支持自定义 app/stream
+	ch, err := a.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
+	if err != nil {
+		slog.WarnContext(ctx, "RTMP 通道未找到", "app", app, "stream", stream, "err", err)
+		return nil
+	}
+	_, err = a.ipcCore.EditChannelConfigAndOnline(ctx, ch.ID, false, func(cfg *ipc.StreamConfig) {
 		cfg.StoppedAt = &now
 	})
 	if err != nil {
-		slog.WarnContext(ctx, "更新 RTMP 通道停流状态失败", "stream", stream, "err", err)
+		slog.WarnContext(ctx, "更新 RTMP 通道停流状态失败", "app", app, "stream", stream, "err", err)
 	}
 	// 同时更新 IsPlaying
-	if _, err := a.ipcCore.EditChannelPlaying(ctx, stream, false); err != nil {
+	if _, err := a.ipcCore.EditChannelPlaying(ctx, ch.Stream, false); err != nil {
 		slog.WarnContext(ctx, "更新 RTMP 通道播放状态失败", "stream", stream, "err", err)
 	}
 	return nil
@@ -62,9 +67,9 @@ func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream strin
 
 // OnPublish 处理 RTMP 推流鉴权
 // 验证推流参数中的 sign 字段是否与配置的 RTMPSecret MD5 一致
-func (a *Adapter) OnPublish(ctx context.Context, stream string, params map[string]string) (bool, error) {
-	// stream 就是 channel.ID，直接查询
-	ch, err := a.ipcCore.GetChannel(ctx, stream)
+func (a *Adapter) OnPublish(ctx context.Context, app, stream string, params map[string]string) (bool, error) {
+	// 通过 app+stream 查询通道，支持自定义 app/stream
+	ch, err := a.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
 	if err != nil {
 		return false, err
 	}

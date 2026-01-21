@@ -36,10 +36,15 @@ func (a *Adapter) InitDevice(ctx context.Context, device *ipc.Device) error {
 
 // OnStreamChanged implements ipc.Protocoler.
 // RTSP 拉流断开时更新通道状态（IsOnline=false, IsPlaying=false）
-func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
-	// stream 就是 channel.ID，直接更新状态
-	if _, err := a.ipcCore.EditChannelOnlineAndPlaying(ctx, stream, false, false); err != nil {
-		slog.WarnContext(ctx, "更新 RTSP 通道状态失败", "stream", stream, "err", err)
+func (a *Adapter) OnStreamChanged(ctx context.Context, app, stream string) error {
+	// 通过 app+stream 查询通道，支持自定义 app/stream
+	ch, err := a.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
+	if err != nil {
+		slog.WarnContext(ctx, "RTSP 通道未找到", "app", app, "stream", stream, "err", err)
+		return nil
+	}
+	if _, err := a.ipcCore.EditChannelOnlineAndPlaying(ctx, ch.Stream, false, false); err != nil {
+		slog.WarnContext(ctx, "更新 RTSP 通道状态失败", "app", app, "stream", stream, "err", err)
 	}
 	return nil
 }
@@ -47,7 +52,8 @@ func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
 // OnStreamNotFound implements ipc.Protocoler.
 // 当流不存在时，从 Channel 获取配置并启动拉流代理
 func (a *Adapter) OnStreamNotFound(ctx context.Context, app string, stream string) error {
-	ch, err := a.ipcCore.GetChannel(ctx, stream)
+	// 通过 app+stream 查询通道，支持自定义 app/stream
+	ch, err := a.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
 	if err != nil {
 		return err
 	}

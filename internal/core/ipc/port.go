@@ -41,7 +41,9 @@ type Protocoler interface {
 
 type Hooker interface {
 	OnStreamNotFound(ctx context.Context, app, stream string) error
-	OnStreamChanged(ctx context.Context, stream string) error
+	// OnStreamChanged 流注销时调用，用于更新通道状态
+	// app/stream 用于支持自定义 app/stream 的 RTMP/RTSP 通道
+	OnStreamChanged(ctx context.Context, app, stream string) error
 }
 
 // OnPublisher 推流鉴权接口（可选实现）
@@ -49,7 +51,8 @@ type Hooker interface {
 type OnPublisher interface {
 	// OnPublish 处理推流鉴权
 	// 返回 true 表示鉴权通过，false 表示鉴权失败
-	OnPublish(ctx context.Context, stream string, params map[string]string) (bool, error)
+	// app/stream 用于支持自定义 app/stream 的 RTMP/RTSP 通道
+	OnPublish(ctx context.Context, app, stream string, params map[string]string) (bool, error)
 }
 
 // PlayResponse 播放响应

@@ -372,6 +372,7 @@ func (e *Engine) SetServerConfig(in *SetServerConfigRequest) (*SetServerConfigRe
 	if err := e.ErrHandle(resp.Code, resp.Msg); err != nil {
 		return nil, err
 	}
+
 	return &resp, nil
 }
 

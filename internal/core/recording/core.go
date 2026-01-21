@@ -55,26 +55,6 @@ func (c Core) IsEnabled() bool {
 	return c.conf != nil && !c.conf.Disabled
 }
 
-// IsTypeEnabled 检查指定通道类型是否启用录制
-// 使用反转逻辑：DisabledXXX=false 表示启用该类型录制
-func (c Core) IsTypeEnabled(channelType string) bool {
-	if !c.IsEnabled() {
-		return false
-	}
-	switch channelType {
-	case "GB28181", "":
-		return !c.conf.DisabledGB28181
-	case "RTMP":
-		return !c.conf.DisabledRTMP
-	case "RTSP":
-		return !c.conf.DisabledRTSP
-	case "ONVIF":
-		return !c.conf.DisabledONVIF
-	default:
-		return false
-	}
-}
-
 // GetFullPath 获取录像文件的完整路径
 // relativePath 可能是相对于 StorageDir 的路径，也可能是完整路径
 func (c Core) GetFullPath(relativePath string) string {

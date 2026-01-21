@@ -57,6 +57,18 @@ func registerZLMWebhookAPI(r gin.IRouter, api WebHookAPI, handler ...gin.Handler
 	}
 }
 
+// getChannelType 通过 app+stream 查询通道获取类型
+// 支持自定义 app/stream 的 RTMP/RTSP 通道：先按 app+stream 查询，查不到再按 id=stream 查询
+// 如果都找不到，则回退到使用 stream 前缀判断类型
+func (w WebHookAPI) getChannelType(ctx context.Context, app, stream string) string {
+	ch, err := w.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
+	if err == nil {
+		return ch.Type
+	}
+	// 回退：使用 stream 前缀判断类型（兼容旧逻辑）
+	return ipc.GetType(stream)
+}
+
 func (w WebHookAPI) onServerStarted(c *gin.Context, _ *struct{}) (DefaultOutput, error) {
 	w.log.InfoContext(c.Request.Context(), "webhook onServerStarted")
 	// 所有 rtmp 通道离线
@@ -81,8 +93,8 @@ func (w WebHookAPI) onPublish(c *gin.Context, in *onPublishInput) (*onPublishOut
 	ctx := c.Request.Context()
 	w.log.Info("webhook onPublish", "app", in.App, "stream", in.Stream, "schema", in.Schema, "mediaServerID", in.MediaServerID)
 
-	// 通过 stream 获取通道类型
-	channelType := ipc.GetType(in.Stream)
+	// 通过 app+stream 查询通道获取类型，支持自定义 app/stream
+	channelType := w.getChannelType(ctx, in.App, in.Stream)
 
 	// 获取协议适配器，检查是否实现了 OnPublisher 接口
 	protocol, ok := w.protocols[channelType]
@@ -112,7 +124,7 @@ func (w WebHookAPI) onPublish(c *gin.Context, in *onPublishInput) (*onPublishOut
 	paramsMap["media_server_id"] = in.MediaServerID
 
 	// 调用协议适配器的 OnPublish 方法
-	allowed, err := publisher.OnPublish(ctx, in.Stream, paramsMap)
+	allowed, err := publisher.OnPublish(ctx, in.App, in.Stream, paramsMap)
 	if err != nil {
 		return &onPublishOutput{DefaultOutput: DefaultOutput{Code: 1, Msg: err.Error()}}, nil
 	}
@@ -138,13 +150,27 @@ func (w WebHookAPI) onStreamChanged(c *gin.Context, in *onStreamChangedInput) (D
 		app = in.AppName
 	}
 
-	// 获取通道类型
-	channelType := ipc.GetType(stream)
+	// 通过 app+stream 查询通道获取类型，支持自定义 app/stream
+	channelType := w.getChannelType(ctx, app, stream)
 
 	if in.Regist {
-		// 流注册时启动录制
-		if err := w.recordingCore.StartRecording(ctx, channelType, app, stream); err != nil {
-			w.log.WarnContext(ctx, "启动录制失败", "stream", stream, "err", err)
+		// 流注册时根据录像模式决定是否启动录制
+		ch, err := w.ipcCore.GetChannelByAppStreamOrID(ctx, app, stream)
+		if err != nil {
+			w.log.WarnContext(ctx, "获取通道信息失败，尝试启动录制", "stream", stream, "err", err)
+			// 找不到通道时仍尝试按旧逻辑启动录制
+			if err := w.recordingCore.StartRecording(ctx, channelType, app, stream); err != nil {
+				w.log.WarnContext(ctx, "启动录制失败", "stream", stream, "err", err)
+			}
+			return newDefaultOutputOK(), nil
+		}
+
+		if !ch.Ext.IsNoneRecord() {
+			// always 模式：自动启动录制
+			if err := w.recordingCore.StartRecording(ctx, channelType, app, stream); err != nil {
+				w.log.WarnContext(ctx, "启动录制失败", "stream", stream, "err", err)
+			}
+			w.log.InfoContext(ctx, "自动启动录制（always模式）", "stream", stream)
 		}
 		return newDefaultOutputOK(), nil
 	}
@@ -158,7 +184,7 @@ func (w WebHookAPI) onStreamChanged(c *gin.Context, in *onStreamChangedInput) (D
 	// 每个协议适配器在 OnStreamChanged 中处理自己的状态逻辑
 	protocol, ok := w.protocols[channelType]
 	if ok {
-		if err := protocol.OnStreamChanged(ctx, stream); err != nil {
+		if err := protocol.OnStreamChanged(ctx, app, stream); err != nil {
 			slog.ErrorContext(ctx, "webhook onStreamChanged", "err", err)
 		}
 	}
@@ -197,8 +223,21 @@ func (w WebHookAPI) onStreamNoneReader(c *gin.Context, in *onStreamNoneReaderInp
 		w.log.WarnContext(ctx, "更新播放状态失败", "stream", in.Stream, "err", err)
 	}
 
-	// 存在录像计划时，不关闭流
-	return onStreamNoneReaderOutput{Close: true}, nil
+	// 根据录像模式判断是否关闭流：
+	// - none(不录制): 无人观看时关闭流
+	// - always/ai(有录像计划): 无人观看时保持流不关闭
+	ch, err := w.ipcCore.GetChannelByAppStreamOrID(ctx, in.App, in.Stream)
+	if err != nil {
+		// 找不到通道时默认关闭流
+		w.log.WarnContext(ctx, "获取通道失败，默认关闭流", "stream", in.Stream, "err", err)
+		return onStreamNoneReaderOutput{Close: true}, nil
+	}
+
+	// 如果录像模式为 none，则关闭流；否则保持流不关闭以继续录制
+	shouldClose := ch.Ext.IsNoneRecord()
+	w.log.InfoContext(ctx, "无人观看判断", "stream", in.Stream, "record_mode", ch.Ext.GetRecordMode(), "close", shouldClose)
+
+	return onStreamNoneReaderOutput{Close: shouldClose}, nil
 }
 
 // onRTPServerTimeout RTP 服务器超时事件
@@ -212,7 +251,8 @@ func (w WebHookAPI) onRTPServerTimeout(c *gin.Context, in *onRTPServerTimeoutInp
 // onStreamNotFound 流不存在事件
 // TODO: 重启后立即播放，会出发 "channel not exist" 待处理
 func (w WebHookAPI) onStreamNotFound(c *gin.Context, in *onStreamNotFoundInput) (DefaultOutput, error) {
-	w.log.InfoContext(c.Request.Context(), "webhook onStreamNotFound", "app", in.App, "stream", in.Stream, "schema", in.Schema, "mediaServerID", in.MediaServerID)
+	ctx := c.Request.Context()
+	w.log.InfoContext(ctx, "webhook onStreamNotFound", "app", in.App, "stream", in.Stream, "schema", in.Schema, "mediaServerID", in.MediaServerID)
 
 	stream := in.StreamName
 	app := in.AppName
@@ -225,11 +265,12 @@ func (w WebHookAPI) onStreamNotFound(c *gin.Context, in *onStreamNotFoundInput) 
 		}
 	}
 
-	r := ipc.GetType(stream)
-	protocol, ok := w.protocols[r]
+	// 通过 app+stream 查询通道获取类型，支持自定义 app/stream
+	channelType := w.getChannelType(ctx, app, stream)
+	protocol, ok := w.protocols[channelType]
 	if ok {
-		if err := protocol.OnStreamNotFound(c.Request.Context(), app, stream); err != nil {
-			slog.InfoContext(c.Request.Context(), "webhook onStreamNotFound", "err", err)
+		if err := protocol.OnStreamNotFound(ctx, app, stream); err != nil {
+			slog.InfoContext(ctx, "webhook onStreamNotFound", "err", err)
 		}
 	}
 
@@ -267,15 +308,15 @@ func (w WebHookAPI) onRecordMP4(c *gin.Context, in *onRecordMP4Input) (DefaultOu
 	startTime := time.Unix(in.StartTime, 0)
 	endTime := startTime.Add(time.Duration(in.TimeLen * float64(time.Second)))
 
-	// 通过 stream 查找 channel ID
+	// 通过 app+stream 查找 channel ID，支持自定义 app/stream
 	var cid string
-	ch, err := w.ipcCore.GetChannelByStream(ctx, in.Stream)
+	ch, err := w.ipcCore.GetChannelByAppStreamOrID(ctx, in.App, in.Stream)
 	if err == nil {
 		cid = ch.ID
 	} else {
 		// 如果找不到通道，使用 stream 作为 CID 的标识
 		cid = in.Stream
-		w.log.WarnContext(ctx, "未找到对应通道，使用 stream 作为 CID", "stream", in.Stream)
+		w.log.WarnContext(ctx, "未找到对应通道，使用 stream 作为 CID", "app", in.App, "stream", in.Stream)
 	}
 
 	// 入库

@@ -65,3 +65,23 @@ func (c *Channel) IsRTMP() bool {
 func (c *Channel) IsRTSP() bool {
 	return c.Type == TypeRTSP || bz.IsRTSP(c.ID)
 }
+
+func (c *Channel) GetApp() string {
+	if c.IsGB28181() {
+		return "rtp"
+	}
+	if c.IsOnvif() {
+		return "live"
+	}
+	return c.App
+}
+
+func (c *Channel) GetStream() string {
+	if c.IsRTMP() {
+		return c.Stream
+	}
+	if c.IsRTSP() {
+		return c.Stream
+	}
+	return c.ID
+}

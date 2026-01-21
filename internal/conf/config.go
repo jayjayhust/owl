@@ -35,10 +35,6 @@ type ServerRecording struct {
 	RetainDays         int     `comment:"录像保留天数（超过则清理）"`
 	DiskUsageThreshold float64 `comment:"磁盘使用率阈值（百分比），超过则触发循环覆盖"`
 	SegmentSeconds     int     `comment:"MP4 切片时长（秒）"`
-	DisabledGB28181    bool    `comment:"是否禁用 GB28181 通道录制（true=禁用）"`
-	DisabledRTMP       bool    `comment:"是否禁用 RTMP 通道录制（true=禁用）"`
-	DisabledRTSP       bool    `comment:"是否禁用 RTSP 通道录制（true=禁用）"`
-	DisabledONVIF      bool    `comment:"是否禁用 ONVIF 通道录制（true=禁用）"`
 }
 
 type ServerAI struct {

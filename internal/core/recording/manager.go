@@ -8,8 +8,8 @@ import (
 // StartRecording 启动录制，在流注册时调用
 // 根据配置决定是否录制该流，并通知 ZLM 开始 MP4 录制
 func (c Core) StartRecording(ctx context.Context, channelType, app, stream string) error {
-	if !c.IsTypeEnabled(channelType) {
-		slog.DebugContext(ctx, "录制未启用或该类型未开启录制", "type", channelType, "app", app, "stream", stream)
+	if !c.IsEnabled() {
+		slog.DebugContext(ctx, "录制未启用", "app", app, "stream", stream)
 		return nil
 	}
 

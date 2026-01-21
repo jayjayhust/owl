@@ -91,8 +91,7 @@ func (c *Core) GetChannel(ctx context.Context, id string) (*Channel, error) {
 }
 
 // AddChannel 添加 RTMP/RTSP 通道，支持自动创建虚拟设备
-// RTMP: app 固定为 "push"，stream 固定为 channel.ID
-// RTSP: app 固定为 "pull"，stream 固定为 channel.ID
+// RTMP/RTSP: 支持自定义 app 和 stream，但禁止使用 app=rtp（rtp 专用于 GB28181）
 func (c *Core) AddChannel(ctx context.Context, in *AddChannelInput) (*Channel, error) {
 	// 仅支持 RTMP/RTSP 类型
 	if in.Type != TypeRTMP && in.Type != TypeRTSP {
@@ -102,6 +101,11 @@ func (c *Core) AddChannel(ctx context.Context, in *AddChannelInput) (*Channel, e
 	// 验证必填字段
 	if in.Name == "" {
 		return nil, reason.ErrBadRequest.SetMsg("通道名称不能为空")
+	}
+
+	// 禁止 app=rtp，rtp 专用于 GB28181 协议
+	if strings.EqualFold(in.App, "rtp") {
+		return nil, reason.ErrBadRequest.SetMsg("app=rtp 为 GB28181 专用，RTMP/RTSP 不可使用")
 	}
 
 	var deviceID string
@@ -149,12 +153,17 @@ func (c *Core) AddChannel(ctx context.Context, in *AddChannelInput) (*Channel, e
 	}
 	out.ID = GenerateChannelID(&out, c.uniqueID)
 
-	// RTMP/RTSP 通道的 app 和 stream 固定，不允许自定义
-	// stream 与 ID 一致，ZLM 回调时可通过 stream 直接查询通道（WHERE id = stream）
+	// RTMP/RTSP 通道：支持自定义 app 和 stream，若未指定则使用默认值
 	switch in.Type {
 	case TypeRTMP:
-		out.App = "push"
-		out.Stream = out.ID
+		out.App = in.App
+		if out.App == "" {
+			out.App = "push"
+		}
+		out.Stream = in.Stream
+		if out.Stream == "" {
+			out.Stream = out.ID
+		}
 	case TypeRTSP:
 		out.App = "pull"
 		out.Stream = out.ID
@@ -195,6 +204,11 @@ func getDevicePrefix(t string) string {
 
 // EditChannel Update object information
 func (c *Core) EditChannel(ctx context.Context, in *EditChannelInput, id string) (*Channel, error) {
+	// 禁止 app=rtp，rtp 专用于 GB28181 协议
+	if strings.EqualFold(in.App, "rtp") {
+		return nil, reason.ErrBadRequest.SetMsg("app=rtp 为 GB28181 专用，RTMP/RTSP 不可使用")
+	}
+
 	// TODO: 修改 onvif 的账号/密码 后需要重新连接设备
 	var out Channel
 	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) error {
@@ -279,10 +293,41 @@ func (c *Core) SetAIEnabled(ctx context.Context, channelID string, enabled bool)
 	return &out, nil
 }
 
+// SetRecordMode 设置通道的录像模式，支持 always/ai/none 三种模式
+func (c *Core) SetRecordMode(ctx context.Context, channelID string, mode string) (*Channel, error) {
+	var out Channel
+	if err := c.store.Channel().Edit(ctx, &out, func(b *Channel) error {
+		b.Ext.RecordMode = mode
+		return nil
+	}, orm.Where("id=?", channelID)); err != nil {
+		return nil, reason.ErrDB.Withf(`Edit err[%s]`, err.Error())
+	}
+	return &out, nil
+}
+
 // GetChannelByAppStream 通过 app 和 stream 获取通道
 func (c *Core) GetChannelByAppStream(ctx context.Context, app, stream string) (*Channel, error) {
 	var out Channel
 	if err := c.store.Channel().Get(ctx, &out, orm.Where("app=? AND stream=?", app, stream)); err != nil {
+		if orm.IsErrRecordNotFound(err) {
+			return nil, reason.ErrNotFound.Withf(`Channel not found app[%s] stream[%s]`, app, stream)
+		}
+		return nil, reason.ErrDB.Withf(`Get err[%s]`, err.Error())
+	}
+	return &out, nil
+}
+
+// GetChannelByAppStreamOrID 通过 app+stream 或 id=stream 获取通道
+// 用于 ZLM 回调时识别通道：先按 app+stream 查找，查不到再按 id=stream 查找
+// 支持自定义 app/stream 的 RTMP/RTSP 通道以及使用默认 ID 作为 stream 的旧通道
+func (c *Core) GetChannelByAppStreamOrID(ctx context.Context, app, stream string) (*Channel, error) {
+	var out Channel
+	// 先按 app+stream 查找
+	if err := c.store.Channel().Get(ctx, &out, orm.Where("app=? AND stream=?", app, stream)); err == nil {
+		return &out, nil
+	}
+	// 再按 id=stream 查找（兼容旧逻辑）
+	if err := c.store.Channel().Get(ctx, &out, orm.Where("id=?", stream)); err != nil {
 		if orm.IsErrRecordNotFound(err) {
 			return nil, reason.ErrNotFound.Withf(`Channel not found app[%s] stream[%s]`, app, stream)
 		}
