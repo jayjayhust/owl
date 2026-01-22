@@ -87,3 +87,8 @@ func (c *Core) getDefaultMediaServer(ctx context.Context) (*MediaServer, error) 
 	var out MediaServer
 	return &out, c.storer.MediaServer().Get(ctx, &out, orm.Where("id=?", DefaultMediaServerID))
 }
+
+// GetDefaultMediaServer 获取默认流媒体服务器
+func (c *Core) GetDefaultMediaServer() (*MediaServer, error) {
+	return c.getDefaultMediaServer(context.Background())
+}

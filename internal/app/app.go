@@ -20,6 +20,19 @@ import (
 )
 
 func Run(bc *conf.Bootstrap) {
+	if bc.Server.Recording.DiskUsageThreshold <= 0 {
+		bc.Server.Recording.DiskUsageThreshold = 95.0
+	}
+	if bc.Server.Recording.SegmentSeconds <= 0 {
+		bc.Server.Recording.SegmentSeconds = 300
+	}
+	if bc.Server.Recording.RetainDays <= 0 {
+		bc.Server.Recording.RetainDays = 3
+	}
+	if bc.Server.Recording.StorageDir == "" {
+		bc.Server.Recording.StorageDir = "./configs/recordings"
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -38,7 +51,7 @@ func Run(bc *conf.Bootstrap) {
 	}
 
 	// 如果需要执行表迁移，递增此版本号和表更新说明
-	versionapi.DBVersion = "0.0.20"
+	versionapi.DBVersion = "0.0.23"
 	versionapi.DBRemark = "onvif device support"
 
 	handler, cleanUp, err := wireApp(bc, log)

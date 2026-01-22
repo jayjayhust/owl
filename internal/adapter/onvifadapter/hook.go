@@ -10,7 +10,9 @@ import (
 	"github.com/ixugo/goddd/pkg/orm"
 )
 
-func (a *Adapter) OnStreamChanged(ctx context.Context, stream string) error {
+// OnStreamChanged implements ipc.Protocoler.
+// ONVIF 协议的 stream 就是 channel.ID，app 固定为 live
+func (a *Adapter) OnStreamChanged(ctx context.Context, app, stream string) error {
 	var ch ipc.Channel
 	if err := a.adapter.Store().Channel().Get(ctx, &ch, orm.Where("id=?", stream)); err != nil {
 		return err

@@ -7,14 +7,13 @@
 package app
 
 import (
-	"log/slog"
-	"net/http"
-
 	"github.com/gowvp/owl/internal/conf"
 	"github.com/gowvp/owl/internal/data"
 	"github.com/gowvp/owl/internal/web/api"
 	"github.com/gowvp/owl/pkg/gbs"
 	"github.com/ixugo/goddd/domain/version/versionapi"
+	"log/slog"
+	"net/http"
 )
 
 // Injectors from wire.go:
@@ -28,21 +27,22 @@ func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error)
 	versionapiAPI := versionapi.New(core)
 	smsCore := api.NewSMSCore(db, bc)
 	smsAPI := api.NewSmsAPI(smsCore)
-	uniqueidCore := api.NewUniqueID(db)
 	storer := api.NewIPCStore(db)
+	uniqueidCore := api.NewUniqueID(db)
 	adapter := api.NewGBAdapter(storer, uniqueidCore)
 	server, cleanup := gbs.NewServer(bc, adapter, smsCore)
-	ipcCore := api.NewIPCCore(storer, uniqueidCore, nil) // protocols 会在下面赋值
-	v := api.NewProtocols(adapter, smsCore, ipcCore, server)
-	// 重新初始化 ipcCore 以包含 protocols
-	ipcCore = api.NewIPCCore(storer, uniqueidCore, v)
-	webHookAPI := api.NewWebHookAPI(smsCore, bc, server, ipcCore, v)
-	ipcapi := api.NewIPCAPI(ipcCore)
+	ipcBundle := api.NewIPCCoreWithProtocols(storer, uniqueidCore, adapter, smsCore, server, bc)
+	recordingStorer := api.NewRecordingStore(db)
+	smsProvider := api.NewSMSProviderAdapter(smsCore)
+	recordingCore := api.NewRecordingCore(recordingStorer, bc, smsProvider)
+	webHookAPI := api.NewWebHookAPI(smsCore, bc, server, ipcBundle, recordingCore)
+	ipcapi := api.NewIPCAPI(ipcBundle, recordingCore)
 	configAPI := api.NewConfigAPI(db, bc)
 	userAPI := api.NewUserAPI(bc)
 	eventCore := api.NewEventCore(db, bc)
-	aiWebhookAPI := api.NewAIWebhookAPIWithDeps(bc, eventCore, ipcCore)
+	aiWebhookAPI := api.NewAIWebhookAPIWithDeps(bc, eventCore, ipcBundle)
 	eventAPI := api.NewEventAPI(eventCore, bc)
+	recordingAPI := api.NewRecordingAPI(recordingCore, bc)
 	usecase := &api.Usecase{
 		Conf:         bc,
 		DB:           db,
@@ -56,6 +56,7 @@ func wireApp(bc *conf.Bootstrap, log *slog.Logger) (http.Handler, func(), error)
 		UserAPI:      userAPI,
 		AIWebhookAPI: aiWebhookAPI,
 		EventAPI:     eventAPI,
+		RecordingAPI: recordingAPI,
 	}
 	handler := api.NewHTTPHandler(usecase)
 	return handler, func() {

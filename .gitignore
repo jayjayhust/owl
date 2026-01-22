@@ -43,3 +43,5 @@ __pycache__/
 *.pt
 *.onnx
 *.remember/
+*.mp4
+owl

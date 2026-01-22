@@ -50,11 +50,15 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 		web.Logger(web.IgnorePrefix(staticPrefix),
 			web.IgnoreMethod(http.MethodOptions),
 			web.IgnorePrefix("/events/image"),
+			web.IgnorePrefix("/recordings/channels"), // m3u8 播放列表
+			web.IgnorePrefix("/static/recordings"),   // 录像文件
 		),
 		web.LoggerWithBody(web.DefaultBodyLimit,
 			web.IgnoreBool(uc.Conf.Debug),
 			web.IgnoreMethod(http.MethodOptions),
 			web.IgnorePrefix("/events/image"),
+			web.IgnorePrefix("/recordings/channels"),
+			web.IgnorePrefix("/static/recordings"),
 		),
 	)
 	go web.CountGoroutines(10*time.Minute, 20)
@@ -118,6 +122,8 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 	uc.AIWebhookAPI.StartAISyncLoop(context.Background(), uc.SMSAPI.smsCore)
 	// TODO: 待补充中间件
 	RegisterEvent(r, uc.EventAPI)
+	// TODO: 待补充中间件
+	RegisterRecording(r, uc.RecordingAPI)
 }
 
 type playOutput struct {

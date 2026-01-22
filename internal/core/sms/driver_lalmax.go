@@ -173,3 +173,13 @@ func (l *LalmaxDriver) withConfig(ms *MediaServer) lalmax.Engine {
 		Secret: ms.Secret,
 	})
 }
+
+// StartRecord lalmax 暂不支持录制功能
+func (l *LalmaxDriver) StartRecord(ctx context.Context, ms *MediaServer, req *zlm.StartRecordRequest) (*zlm.StartRecordResponse, error) {
+	return nil, fmt.Errorf("lalmax 暂不支持录制功能")
+}
+
+// StopRecord lalmax 暂不支持录制功能
+func (l *LalmaxDriver) StopRecord(ctx context.Context, ms *MediaServer, req *zlm.StopRecordRequest) (*zlm.StopRecordResponse, error) {
+	return nil, fmt.Errorf("lalmax 暂不支持录制功能")
+}

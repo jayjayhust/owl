@@ -40,6 +40,28 @@ type DeviceExt struct {
 	GBVersion    string `json:"gb_version"`   // GB版本
 	Zones        []Zone `json:"zones"`        // 区域
 	EnabledAI    bool   `json:"enabled_ai"`   // 是否启用 AI
+
+	// 空串表示 always
+	RecordMode string `json:"record_mode"` // 录像模式, 一直录制:always, 按AI触发:ai, 不录制:none
+}
+
+func (e *DeviceExt) GetRecordMode() string {
+	if e.RecordMode == "" {
+		return "always"
+	}
+	return e.RecordMode
+}
+
+func (e *DeviceExt) IsAlwaysRecord() bool {
+	return e.RecordMode == "always" || e.RecordMode == ""
+}
+
+func (e *DeviceExt) IsAIRecord() bool {
+	return e.RecordMode == "ai"
+}
+
+func (e *DeviceExt) IsNoneRecord() bool {
+	return e.RecordMode == "none"
 }
 
 // Scan implements orm.Scaner.

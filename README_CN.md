@@ -135,9 +135,11 @@ postgres 和 mysql 的格式即:
 
 > 如何关闭 AI?
 
-ai 默认是开启状态，1 秒检测 1 帧
+可以在 `configs/config.toml` 中修改 `disabledAI = true` 全局关闭 ai 检测
 
-可以在 `configs/config.toml` 中修改 `disabledAI = true` 关闭 ai 检测
+目前 v1.3.0 版本是 1 秒检测 1 帧，需要播放视频在右上角手动开启.
+
+开启分析后，每路流占用约 200MB 内存 2 核
 
 > 国标设备在线，通道离线?
 
@@ -178,6 +180,7 @@ ZLM使用文档 [github.com/ZLMediaKit/ZLMediaKit](https://github.com/ZLMediaKit
 
 
 ** gowvp & zlmediakit 融合镜像(推荐)**
+
 docker-compose.yml
 ```yml
 services:
@@ -206,42 +209,11 @@ services:
     volumes:
       # 日志目录是 configs/logs
       - ./data:/opt/media/bin/configs
+      # 录像
+      - ./recordings:/opt/media/bin/configs/recordings
 ```
 
-** gowvp & zlmediakit 分离镜像(部署更复杂)**
-```yml
-services:
-  gowvp:
-    image: registry.cn-shanghai.aliyuncs.com/ixugo/gowvp:latest
-    ports:
-      - 15123:15123 # 管理平台 http 端口
-      - 15060:15060 # gb28181 sip tcp 端口
-      - 15060:15060/udp # gb28181 sip udp 端口
-    volumes:
-      # - ./logs:/app/logs # 如果需要持久化日志，请取消注释
-      - ./configs:/app/configs
-    depends_on:
-      - zlm
-  zlm:
-    image: zlmediakit/zlmediakit:master
-    restart: always
-    # 推荐 linux 主机使用 host 模式
-    # network_mode: host
-    ports:
-      - 1935:1935 # rtmp
-      - 554:554 # rtsp
-      - 8080:80 # api
-      - 8443:443
-      - 10000:10000
-      - 10000:10000/udp
-      - 8000:8000/udp
-      - 9000:9000/udp
-      - 20000-20100:20000-20100
-      - 20000-20100:20000-20100/udp
-    volumes:
-      - ./configs:/opt/media/conf
-```
-
+另外，gowvp 和 zlm 可以分开部署，在配置文件配置一下连接地址和端口
 
 
 ## 快速开始

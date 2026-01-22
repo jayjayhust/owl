@@ -19,9 +19,9 @@ import (
 	"github.com/gowvp/owl/internal/adapter/onvifadapter"
 	"github.com/gowvp/owl/internal/core/bz"
 	"github.com/gowvp/owl/internal/core/ipc"
+	"github.com/gowvp/owl/internal/core/recording"
 	"github.com/gowvp/owl/internal/core/sms"
 	"github.com/gowvp/owl/pkg/zlm"
-	"github.com/ixugo/goddd/domain/uniqueid"
 	"github.com/ixugo/goddd/pkg/hook"
 	"github.com/ixugo/goddd/pkg/orm"
 	"github.com/ixugo/goddd/pkg/reason"
@@ -53,16 +53,13 @@ func readCover(dataDir, channelID string) ([]byte, error) {
 }
 
 type IPCAPI struct {
-	ipc ipc.Core
-	uc  *Usecase
+	ipc           ipc.Core
+	uc            *Usecase
+	recordingCore recording.Core
 }
 
-func NewIPCAPI(core ipc.Core) IPCAPI {
-	return IPCAPI{ipc: core}
-}
-
-func NewIPCCore(store ipc.Storer, uni uniqueid.Core, protocols map[string]ipc.Protocoler) ipc.Core {
-	return ipc.NewCore(store, uni, protocols)
+func NewIPCAPI(bundle IPCBundle, recordingCore recording.Core) IPCAPI {
+	return IPCAPI{ipc: bundle.Core, recordingCore: recordingCore}
 }
 
 func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
@@ -98,17 +95,18 @@ func registerGB28181(g gin.IRouter, api IPCAPI, handler ...gin.HandlerFunc) {
 	// 统一的通道管理 API（支持所有协议）
 	{
 		group := g.Group("/channels", handler...)
-		group.GET("", web.WrapH(api.findChannel))                   // 通道列表（所有协议）
-		group.POST("", web.WrapH(api.addChannel))                   // 添加通道（RTMP/RTSP）
-		group.PUT("/:id", web.WrapH(api.editChannel))               // 修改通道（所有协议）
-		group.DELETE("/:id", web.WrapH(api.delChannel))             // 删除通道（RTMP/RTSP）
-		group.POST("/:id/play", web.WrapH(api.play))                // 播放（所有协议）
-		group.POST("/:id/snapshot", web.WrapH(api.refreshSnapshot)) // 图像抓拍（所有协议）
-		group.GET("/:id/snapshot", api.getSnapshot)                 // 获取图像（所有协议）
-		group.POST("/:id/zones", web.WrapH(api.addZone))            // 添加区域（所有协议）
-		group.GET("/:id/zones", web.WrapH(api.getZones))            // 获取区域（所有协议）
-		group.POST("/:id/ai/enable", web.WrapH(api.enableAI))       // 启用 AI 检测
-		group.POST("/:id/ai/disable", web.WrapH(api.disableAI))     // 禁用 AI 检测
+		group.GET("", web.WrapH(api.findChannel))                    // 通道列表（所有协议）
+		group.POST("", web.WrapH(api.addChannel))                    // 添加通道（RTMP/RTSP）
+		group.PUT("/:id", web.WrapH(api.editChannel))                // 修改通道（所有协议）
+		group.DELETE("/:id", web.WrapH(api.delChannel))              // 删除通道（RTMP/RTSP）
+		group.POST("/:id/play", web.WrapH(api.play))                 // 播放（所有协议）
+		group.POST("/:id/snapshot", web.WrapH(api.refreshSnapshot))  // 图像抓拍（所有协议）
+		group.GET("/:id/snapshot", api.getSnapshot)                  // 获取图像（所有协议）
+		group.POST("/:id/zones", web.WrapH(api.addZone))             // 添加区域（所有协议）
+		group.GET("/:id/zones", web.WrapH(api.getZones))             // 获取区域（所有协议）
+		group.POST("/:id/ai/enable", web.WrapH(api.enableAI))        // 启用 AI 检测
+		group.POST("/:id/ai/disable", web.WrapH(api.disableAI))      // 禁用 AI 检测
+		group.POST("/:id/record_mode", web.WrapH(api.setRecordMode)) // 设置录像模式
 	}
 }
 
@@ -165,7 +163,26 @@ func (a IPCAPI) queryCatalog(c *gin.Context, _ *struct{}) (any, error) {
 }
 
 func (a IPCAPI) FindChannelsForDevice(c *gin.Context, in *ipc.FindDeviceInput) (any, error) {
-	items, total, err := a.ipc.FindChannelsForDevice(c.Request.Context(), in)
+	ctx := c.Request.Context()
+	items, total, err := a.ipc.FindChannelsForDevice(ctx, in)
+
+	// 收集所有通道 ID 用于批量查询录像
+	var cids []string
+	for _, dev := range items {
+		for _, ch := range dev.Children {
+			cids = append(cids, ch.ID)
+		}
+	}
+
+	// 批量查询哪些通道有录像
+	hasRecordingMap, _ := a.recordingCore.HasRecordings(ctx, cids)
+
+	// 为每个通道设置 has_recording 标记
+	for _, dev := range items {
+		for _, ch := range dev.Children {
+			ch.HasRecording = hasRecordingMap[ch.ID]
+		}
+	}
 
 	// 按照在线优先排序
 	sort.SliceStable(items, func(i, j int) bool {
@@ -634,4 +651,45 @@ func (a IPCAPI) buildRTSPURL(ctx context.Context, channelID string) (string, err
 	}
 
 	return fmt.Sprintf("rtsp://%s:%d/%s/%s", "127.0.0.1", svr.Ports.RTSP, app, stream), nil
+}
+
+// setRecordModeInput 设置录像模式请求参数
+type setRecordModeInput struct {
+	// 录像模式：always-一直录制，ai-按AI触发录制，none-不录制
+	Mode string `json:"mode" binding:"required,oneof=always ai none"`
+}
+
+// setRecordMode 设置通道的录像模式，支持三种模式：always(一直录制)、ai(AI触发录制)、none(不录制)
+// always 和 ai 都会启用录制
+func (a IPCAPI) setRecordMode(c *gin.Context, in *setRecordModeInput) (gin.H, error) {
+	channelID := c.Param("id")
+	ctx := c.Request.Context()
+
+	// 更新通道的录像模式
+	channel, err := a.ipc.SetRecordMode(ctx, channelID, in.Mode)
+	if err != nil {
+		return nil, err
+	}
+
+	// 根据录像模式控制 ZLM 录制：
+	// - always/ai: 如果流在线则启动录制
+	// - none: 停止录制
+	if channel.Ext.IsNoneRecord() {
+		// none 模式：停止录制
+		if err := a.recordingCore.StopRecording(ctx, channel.GetApp(), channel.GetStream()); err != nil {
+			slog.WarnContext(ctx, "停止录制失败", "channel", channelID, "err", err)
+		}
+	} else {
+		// always/ai 模式：如果流在线则启动录制
+		if channel.IsOnline {
+			if err := a.recordingCore.StartRecording(ctx, channel.Type, channel.GetApp(), channel.GetStream()); err != nil {
+				slog.WarnContext(ctx, "启动录制失败", "channel", channelID, "err", err)
+			}
+		}
+	}
+
+	return gin.H{
+		"id":          channel.ID,
+		"record_mode": channel.Ext.GetRecordMode(),
+	}, nil
 }
