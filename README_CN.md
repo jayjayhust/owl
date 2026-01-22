@@ -263,6 +263,11 @@ services:
 + 5. 执行 `docker compose restart`
 + 6. 浏览器访问 `http://localhost:15123`
 
+**更新镜像**
+
+```bash
+docker compose pull && docker compose up -d
+```
 
 ##  如何参与开发?
 

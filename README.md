@@ -242,6 +242,11 @@ If you're a Go developer familiar with Docker, you can download the source code 
 5. Run `docker compose restart`
 6. Access `http://localhost:15123` in your browser
 
+**Pull latest image**
+```bash
+docker compose pull && docker compose up -d
+```
+
 ## How to Contribute?
 
 1. Fork this project
