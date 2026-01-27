@@ -88,3 +88,25 @@ func (a *Adapter) StopPlay(ctx context.Context, device *ipc.Device, channel *ipc
 func (a *Adapter) ValidateDevice(ctx context.Context, device *ipc.Device) error {
 	return nil
 }
+
+// PTZControl implements ipc.Protocoler.
+func (a *Adapter) PTZControl(ctx context.Context, channel *ipc.Channel, direction int, speed int, horizontal int, vertical int, zoom int) error {
+	return a.gbs.PTZControl(ctx, &gbs.PTZInput{
+		Channel:    channel,
+		Direction:  gbs.PTZDirection(direction),
+		Speed:      speed,
+		Horizontal: horizontal,
+		Vertical:   vertical,
+		Zoom:       zoom,
+	})
+}
+
+// PTZPresetControl implements ipc.Protocoler.
+func (a *Adapter) PTZPresetControl(ctx context.Context, channel *ipc.Channel, command string, presetID int) error {
+	return a.gbs.PTZPresetControl(ctx, &gbs.PTZPresetInput{
+		Channel:  channel,
+		Command:  command,
+		PresetID: presetID,
+	})
+}
+

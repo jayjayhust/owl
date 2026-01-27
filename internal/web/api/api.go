@@ -112,6 +112,8 @@ func setupRouter(r *gin.Engine, uc *Usecase) {
 	registerConfig(r, uc.ConfigAPI, auth)
 	registerSms(r, uc.SMSAPI, auth)
 	RegisterUser(r, uc.UserAPI, auth)
+	// 注册 PTZ 控制接口
+	RegisterPTZ(r, uc.PTZAPI, auth)
 
 	// 反向代理流媒体数据
 	r.Any("/proxy/sms/*path", uc.proxySMS)

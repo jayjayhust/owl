@@ -39,6 +39,23 @@ type Protocoler interface {
 	Hooker
 }
 
+// PTZController PTZ 控制接口（可选实现）
+// 只有支持 PTZ 控制的协议需要实现此接口（如 GB28181、ONVIF）
+type PTZController interface {
+	// PTZControl PTZ 方向控制
+	// direction: 0-上, 1-下, 2-左, 3-右, 4-左上, 5-右上, 6-左下, 7-右下, 8-放大, 9-缩小, 10-焦点前调, 11-焦点后调, 12-光圈扩大, 13-光圈缩小
+	// speed: 速度 0-255, 0 表示停止
+	// horizontal: 水平速度 0-255 (可选，0表示停止)
+	// vertical: 垂直速度 0-255 (可选，0表示停止)
+	// zoom: 变倍速度 0-15 (可选，0表示停止)
+	PTZControl(ctx context.Context, channel *Channel, direction int, speed int, horizontal int, vertical int, zoom int) error
+
+	// PTZPresetControl PTZ 预置位控制
+	// command: SetPreset-设置, GotoPreset-调用, RemovePreset-删除
+	// presetID: 预置位编号 1-255
+	PTZPresetControl(ctx context.Context, channel *Channel, command string, presetID int) error
+}
+
 type Hooker interface {
 	OnStreamNotFound(ctx context.Context, app, stream string) error
 	// OnStreamChanged 流注销时调用，用于更新通道状态

@@ -270,3 +270,23 @@ func (s *Server) StopPlay(ctx context.Context, in *StopPlayInput) error {
 func (s *Server) QuerySnapshot(deviceID, channelID string) error {
 	return s.gb.QuerySnapshot(deviceID, channelID)
 }
+
+// PTZControl PTZ方向控制
+func (s *Server) PTZControl(ctx context.Context, in *PTZInput) error {
+	return s.gb.PTZControl(ctx, in)
+}
+
+// PTZPresetControl PTZ预置位控制
+func (s *Server) PTZPresetControl(ctx context.Context, in *PTZPresetInput) error {
+	return s.gb.PTZPresetControl(ctx, in)
+}
+
+// PTZCruiseControl PTZ巡航控制
+func (s *Server) PTZCruiseControl(ctx context.Context, in *PTZCruiseInput) error {
+	return s.gb.PTZCruiseControl(ctx, in)
+}
+
+// PTZScanControl PTZ扫描控制
+func (s *Server) PTZScanControl(ctx context.Context, in *PTZScanInput) error {
+	return s.gb.PTZScanControl(ctx, in)
+}

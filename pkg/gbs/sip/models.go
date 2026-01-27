@@ -105,11 +105,32 @@ var (
 <DeviceID>%s</DeviceID>
 </Query>
 `
+	// PTZControlXML PTZ控制xml样式
+	PTZControlXML = `<?xml version="1.0" encoding="GB2312"?>
+<Control>
+<CmdType>DeviceControl</CmdType>
+<SN>%d</SN>
+<DeviceID>%s</DeviceID>
+<PTZCmd>%s</PTZCmd>
+<Info>
+<ControlPriority>5</ControlPriority>
+</Info>
+</Control>
+`
 )
 
 // GetDeviceInfoXML 获取设备详情指令
 func GetDeviceInfoXML(id string) []byte {
 	return fmt.Appendf(nil, DeviceInfoXML, RandInt(100000, 999999), id)
+}
+
+// GetPTZControlXML 获取PTZ控制指令
+func GetPTZControlXML(channelID string, ptzCmd []byte) []byte {
+	// 将字节数组转换为十六进制字符串
+	hexCmd := fmt.Sprintf("%02X%02X%02X%02X%02X%02X%02X%02X",
+		ptzCmd[0], ptzCmd[1], ptzCmd[2], ptzCmd[3],
+		ptzCmd[4], ptzCmd[5], ptzCmd[6], ptzCmd[7])
+	return fmt.Appendf(nil, PTZControlXML, RandInt(100000, 999999), channelID, hexCmd)
 }
 
 // GetCatalogXML 获取NVR下设备列表指令

@@ -49,6 +49,8 @@ var (
 		NewEventCore, NewEventAPI,
 		// Recording: Store -> SMSProvider(adapter) -> Core -> API
 		NewRecordingStore, NewSMSProviderAdapter, NewRecordingCore, NewRecordingAPI,
+		// PTZ API
+		NewPTZAPIWithBundle,
 	)
 )
 
@@ -69,6 +71,7 @@ type Usecase struct {
 	EventAPI EventAPI
 
 	RecordingAPI RecordingAPI
+	PTZAPI       PTZAPI
 }
 
 // NewHTTPHandler 生成Gin框架路由内容
@@ -186,3 +189,9 @@ func NewAIWebhookAPIWithDeps(conf *conf.Bootstrap, eventCore event.Core, ipcBund
 func NewSMSProviderAdapter(smsCore sms.Core) recording.SMSProvider {
 	return adapter.NewSMSAdapter(smsCore)
 }
+
+// NewPTZAPIWithBundle 创建 PTZ API
+func NewPTZAPIWithBundle(ipcBundle IPCBundle) PTZAPI {
+	return NewPTZAPI(ipcBundle)
+}
+
